@@ -1,5 +1,6 @@
 package com.dhbw.webeng2.stomo.service;
 
+import com.dhbw.webeng2.stomo.exception.EmailAlreadyExistsException;
 import com.dhbw.webeng2.stomo.model.dto.UserDto;
 import com.dhbw.webeng2.stomo.model.entity.User;
 import com.dhbw.webeng2.stomo.repository.UserRepo;
