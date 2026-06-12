@@ -1,12 +1,15 @@
 import { ThemeProvider } from './theme/ThemeProvider';
 import { YodaTextProvider } from './theme/YodaTextProvider';
-import Dashboard from './components/Dashboard';
+import { AuthProvider } from './auth/AuthProvider';
+import AppShell from './components/AppShell';
 
 function App() {
   return (
     <ThemeProvider>
       <YodaTextProvider>
-        <Dashboard />
+        <AuthProvider>
+          <AppShell />
+        </AuthProvider>
       </YodaTextProvider>
     </ThemeProvider>
   );

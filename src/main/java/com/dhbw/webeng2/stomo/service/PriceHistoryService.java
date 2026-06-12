@@ -109,6 +109,18 @@ public class PriceHistoryService {
         return new ArrayList<>(Arrays.asList(bars));
     }
 
+    /** Latest known price for a symbol: last 10-min close, falling back to the last 30-min close. */
+    public Double getLatestPrice(String symbol) {
+        PriceSeriesDto series = getSeries(symbol);
+        Double fine = lastClose(series.getFine());
+        return fine != null ? fine : lastClose(series.getCoarse());
+    }
+
+    private Double lastClose(List<QuoteDto> bars) {
+        if (bars == null || bars.isEmpty()) return null;
+        return bars.get(bars.size() - 1).getClose();
+    }
+
     private Object lockFor(String key) {
         return locks.computeIfAbsent(key, k -> new Object());
     }
