@@ -36,6 +36,12 @@ export default function Layout() {
     navigate(`/app/${encodeURIComponent(value)}`);
   }
 
+  // The Market tab resumes the last stock you looked at, rather than the search entry.
+  function goMarket() {
+    const last = window.localStorage.getItem('stomo-last-symbol');
+    navigate(last ? `/app/${encodeURIComponent(last)}` : '/app');
+  }
+
   function goWatchlist() {
     if (user) navigate('/watchlist');
     else requireLogin('/watchlist');
@@ -56,7 +62,7 @@ export default function Layout() {
           </button>
 
           <nav className="hidden lg:flex items-center gap-10">
-            <NavTab label="Market" active={onMarket} onClick={() => navigate('/app')} />
+            <NavTab label="Market" active={onMarket} onClick={goMarket} />
             <NavTab label="Watchlist" active={onWatchlist} onClick={goWatchlist} />
           </nav>
 
@@ -95,7 +101,7 @@ export default function Layout() {
       <Outlet context={{ selectSymbol, requireLogin }} />
 
       <nav className="lg:hidden fixed bottom-0 left-0 w-full z-50 h-20 bg-surface/80 backdrop-blur-xl border-t border-outline-variant/20 flex justify-around items-center px-4">
-        <MobileNavItem icon={<BarChart3 />} label="Market" active={onMarket} onClick={() => navigate('/app')} />
+        <MobileNavItem icon={<BarChart3 />} label="Market" active={onMarket} onClick={goMarket} />
         <MobileNavItem icon={<Bookmark />} label="Watchlist" active={onWatchlist} onClick={goWatchlist} />
       </nav>
 

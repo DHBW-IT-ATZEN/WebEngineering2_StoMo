@@ -1,3 +1,4 @@
+import { useEffect } from 'react';
 import { BrowserRouter, Navigate, Route, Routes, useOutletContext, useParams } from 'react-router-dom';
 import { ThemeProvider } from './theme/ThemeProvider';
 import { YodaTextProvider } from './theme/YodaTextProvider';
@@ -12,7 +13,12 @@ import WatchlistPage from './components/WatchlistPage';
 function MarketView() {
   const { symbol } = useParams();
   const { requireLogin } = useOutletContext();
-  return <Dashboard symbol={(symbol || '').toUpperCase()} onRequireLogin={() => requireLogin()} />;
+  const upper = (symbol || '').toUpperCase();
+  // Remember the last stock viewed so switching tabs (Market <-> Watchlist) resumes it.
+  useEffect(() => {
+    if (upper) window.localStorage.setItem('stomo-last-symbol', upper);
+  }, [upper]);
+  return <Dashboard symbol={upper} onRequireLogin={() => requireLogin()} />;
 }
 
 function App() {
