@@ -9,14 +9,14 @@ import { useAuth } from '../auth/useAuth';
 
 /**
  * In-app shell: the header (brand, Market/Watchlist nav, ticker search, theme toggle,
- * login/logout) plus the routed view via <Outlet />. Owns the selected symbol and the auth
- * modal, shared with child routes through the outlet context. Only the watchlist needs login.
+ * login/logout) plus the routed view via <Outlet />. The selected symbol lives in the URL
+ * (/app/:symbol); the auth modal and login handler are shared with child routes through the
+ * outlet context. Only the watchlist needs login.
  */
 export default function Layout() {
   const { user, logout } = useAuth();
   const navigate = useNavigate();
   const { pathname } = useLocation();
-  const [symbol, setSymbol] = useState('AAPL');
   const [authOpen, setAuthOpen] = useState(false);
   const [afterAuth, setAfterAuth] = useState(null);
 
@@ -33,8 +33,7 @@ export default function Layout() {
   }
 
   function selectSymbol(value) {
-    setSymbol(value);
-    navigate('/app');
+    navigate(`/app/${encodeURIComponent(value)}`);
   }
 
   function goWatchlist() {
@@ -93,7 +92,7 @@ export default function Layout() {
         </div>
       </header>
 
-      <Outlet context={{ symbol, selectSymbol, requireLogin }} />
+      <Outlet context={{ selectSymbol, requireLogin }} />
 
       <nav className="lg:hidden fixed bottom-0 left-0 w-full z-50 h-20 bg-surface/80 backdrop-blur-xl border-t border-outline-variant/20 flex justify-around items-center px-4">
         <MobileNavItem icon={<BarChart3 />} label="Market" active={onMarket} onClick={() => navigate('/app')} />
