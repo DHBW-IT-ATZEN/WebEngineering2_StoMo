@@ -3,7 +3,7 @@ services:
   db:
     image: mysql:8.0
     container_name: stomo-mysql
-    restart: always
+    restart: unless-stopped
     environment:
       MYSQL_DATABASE: stomo_db
       MYSQL_ROOT_PASSWORD: rootpassword
@@ -13,31 +13,45 @@ services:
       - "3306:3306"
     volumes:
       - db_data:/var/lib/mysql
+    healthcheck:
+      test: ["CMD-SHELL", "mysqladmin ping -h 127.0.0.1 -u stomo_user -p$$MYSQL_PASSWORD --silent"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
 
   # Spring Boot backend
   backend:
     build: .
     container_name: stomo-backend
+    restart: unless-stopped
     ports:
       - "8080:8080"
     env_file:
-      - .env                            # ALPHAVANTAGE_API_KEY / FINNHUB_API_KEY / YODA_API_KEY
+      - .env                            # ALPHAVANTAGE_API_KEY / FINNHUB_API_KEY / YODA_API_KEY / JWT_SECRET
     environment:
+      # Production profile: the app refuses to boot with the built-in dev JWT secret,
+      # so a strong JWT_SECRET must be supplied via .env.
+      - SPRING_PROFILES_ACTIVE=prod
       # Override the localhost DB URL from application.properties — use the compose-network "db" host.
       - SPRING_DATASOURCE_URL=jdbc:mysql://db:3306/stomo_db?allowPublicKeyRetrieval=true&useSSL=false&serverTimezone=UTC
       - SPRING_DATASOURCE_USERNAME=stomo_user
       - SPRING_DATASOURCE_PASSWORD=stomo_password
     depends_on:
-      - db
+      db:
+        condition: service_healthy     # wait until MySQL is accepting connections
+    # The image's HEALTHCHECK (Actuator /actuator/health) drives this service's health status.
 
   # Static frontend (Vite build) served by nginx, with /api proxied to the backend container
   frontend:
     build: ./frontend
     container_name: stomo-frontend
+    restart: unless-stopped
     ports:
       - "5173:80"
     depends_on:
-      - backend
+      backend:
+        condition: service_healthy     # wait until the backend reports healthy
 
 volumes:
   db_data:

@@ -6,6 +6,8 @@ import com.dhbw.webeng2.stomo.model.entity.PriceHistory;
 import com.dhbw.webeng2.stomo.repository.PriceHistoryRepo;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.dao.DataIntegrityViolationException;
+import org.springframework.dao.OptimisticLockingFailureException;
 import org.springframework.stereotype.Service;
 import tools.jackson.databind.ObjectMapper;
 
@@ -15,20 +17,18 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Optional;
-import java.util.concurrent.ConcurrentHashMap;
 
 /**
- * Caches the intraday 30-minute series per symbol in the database (source: Yahoo).
- * The client derives intraday/weekly/monthly views from this single series, so
- * one fetch backs every timeframe and survives reloads, restarts and other users.
+ * Caches the intraday price series per symbol in the database (source: Yahoo). The client
+ * derives intraday/weekly/monthly views from this single series, so one fetch backs every
+ * timeframe and survives reloads, restarts and other users.
  *
- * Concurrency: a per-symbol lock makes concurrent requests for the same symbol
- * coalesce into a single fetch + single write (the symbol is the primary key, so a
- * security can never be stored twice). If the upstream fails but cached data exists,
- * the stale data is served instead of erroring.
- *
- * Note: the lock is JVM-local, which is correct for a single backend instance.
- * A multi-instance deployment would need a DB-level lock / upsert instead.
+ * Concurrency: the symbol is the primary key and the row carries an optimistic-locking
+ * {@code @Version}, so concurrent refreshes are coordinated by the database — across threads
+ * <em>and</em> across multiple backend instances. The first writer wins; a loser (an
+ * optimistic-lock or duplicate-key failure) just reads the row back and serves what the winner
+ * wrote. If the upstream fails but cached data exists, the stale data is served instead of
+ * erroring. (This replaces the previous JVM-local lock, which only coordinated one instance.)
  */
 @Service
 @Slf4j
@@ -38,8 +38,6 @@ public class PriceHistoryService {
     private final YahooService yahoo;
     private final ObjectMapper objectMapper;
     private final Duration ttl;
-
-    private final ConcurrentHashMap<String, Object> locks = new ConcurrentHashMap<>();
 
     public PriceHistoryService(PriceHistoryRepo repo,
                                YahooService yahoo,
@@ -60,30 +58,28 @@ public class PriceHistoryService {
             return build(key, cached.get());
         }
 
-        synchronized (lockFor(key)) {
-            // Re-check: another thread may have refreshed while we waited.
-            cached = repo.findById(key);
-            if (isFresh(cached)) {
+        try {
+            List<QuoteDto> coarse = yahoo.fetch30m(key);
+            List<QuoteDto> fine = yahoo.fetch10m(key);
+            PriceHistory entity = cached.orElseGet(PriceHistory::new);
+            entity.setSymbol(key);
+            entity.setBarsJson(objectMapper.writeValueAsString(coarse));
+            entity.setFineBarsJson(objectMapper.writeValueAsString(fine));
+            entity.setFetchedAt(Instant.now());
+            repo.save(entity);
+            return PriceSeriesDto.builder().symbol(key).coarse(coarse).fine(fine).build();
+        } catch (OptimisticLockingFailureException | DataIntegrityViolationException ex) {
+            // Another thread/instance refreshed this symbol concurrently — the DB row is the
+            // single source of truth, so serve what the winner just wrote.
+            return repo.findById(key)
+                    .map(e -> build(key, e))
+                    .orElseThrow(() -> ex);
+        } catch (RuntimeException ex) {
+            if (cached.isPresent() && cached.get().getBarsJson() != null) {
+                log.warn("Yahoo refresh failed for {} ({}); serving stale cache.", key, ex.getMessage());
                 return build(key, cached.get());
             }
-
-            try {
-                List<QuoteDto> coarse = yahoo.fetch30m(key);
-                List<QuoteDto> fine = yahoo.fetch10m(key);
-                PriceHistory entity = cached.orElseGet(PriceHistory::new);
-                entity.setSymbol(key);
-                entity.setBarsJson(objectMapper.writeValueAsString(coarse));
-                entity.setFineBarsJson(objectMapper.writeValueAsString(fine));
-                entity.setFetchedAt(Instant.now());
-                repo.save(entity);
-                return PriceSeriesDto.builder().symbol(key).coarse(coarse).fine(fine).build();
-            } catch (RuntimeException ex) {
-                if (cached.isPresent() && cached.get().getBarsJson() != null) {
-                    log.warn("Yahoo refresh failed for {} ({}); serving stale cache.", key, ex.getMessage());
-                    return build(key, cached.get());
-                }
-                throw ex;
-            }
+            throw ex;
         }
     }
 
@@ -119,9 +115,5 @@ public class PriceHistoryService {
     private Double lastClose(List<QuoteDto> bars) {
         if (bars == null || bars.isEmpty()) return null;
         return bars.get(bars.size() - 1).getClose();
-    }
-
-    private Object lockFor(String key) {
-        return locks.computeIfAbsent(key, k -> new Object());
     }
 }

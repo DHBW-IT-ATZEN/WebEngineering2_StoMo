@@ -1,0 +1,17 @@
+# Keep the backend build context small (faster uploads, fewer cache invalidations).
+# The backend image only needs pom.xml + src/.
+target/
+.git/
+.github/
+.idea/
+*.iml
+.mvn/
+mvnw
+mvnw.cmd
+frontend/
+.claude/
+.env
+*.md
+.gitignore
+.gitattributes
+docker-compose.yml

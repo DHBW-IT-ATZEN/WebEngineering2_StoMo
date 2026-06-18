@@ -2,6 +2,7 @@ package com.dhbw.webeng2.stomo.service;
 
 import com.dhbw.webeng2.stomo.exception.ResourceNotFoundException;
 import com.dhbw.webeng2.stomo.model.dto.QuoteDto;
+import com.dhbw.webeng2.stomo.model.dto.TickerDto;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.core.ParameterizedTypeReference;
@@ -44,6 +45,41 @@ public class YahooService {
     /** 10-minute bars (aggregated from Yahoo's 5m) over a few days — backs the intraday view. */
     public List<QuoteDto> fetch10m(String symbol) {
         return aggregateTo10m(fetchBars(symbol, "5m", "5d"));
+    }
+
+    /**
+     * Latest price + day-over-day % change for one symbol, from the chart endpoint's meta block
+     * (a single call). Returns {@code null} if Yahoo has no usable data for the symbol.
+     */
+    @SuppressWarnings("unchecked")
+    public TickerDto fetchDailyQuote(String symbol) {
+        Map<String, Object> root = webClient.get()
+                .uri(uriBuilder -> uriBuilder
+                        .path("/v8/finance/chart/{symbol}")
+                        .queryParam("interval", "1d")
+                        .queryParam("range", "1d")
+                        .build(symbol))
+                .header("User-Agent", "Mozilla/5.0")
+                .retrieve()
+                .bodyToMono(JSON_MAP)
+                .block();
+
+        Map<String, Object> chart = root == null ? null : (Map<String, Object>) root.get("chart");
+        List<Object> results = chart == null ? null : (List<Object>) chart.get("result");
+        if (results == null || results.isEmpty()) {
+            return null;
+        }
+        Map<String, Object> meta = (Map<String, Object>) ((Map<String, Object>) results.get(0)).get("meta");
+        if (meta == null) {
+            return null;
+        }
+        Double price = toDouble(meta.get("regularMarketPrice"));
+        Double prevClose = toDouble(meta.get("chartPreviousClose"));
+        if (price == null || prevClose == null || prevClose == 0d) {
+            return null;
+        }
+        double changePct = (price - prevClose) / prevClose * 100.0;
+        return TickerDto.builder().symbol(symbol).price(price).changePct(changePct).build();
     }
 
     @SuppressWarnings("unchecked")
