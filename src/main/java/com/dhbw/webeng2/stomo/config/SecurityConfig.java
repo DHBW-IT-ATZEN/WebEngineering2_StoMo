@@ -47,7 +47,7 @@ public class SecurityConfig {
                 .authorizeHttpRequests(auth -> auth
                         .requestMatchers("/api/auth/register", "/api/auth/login").permitAll()
                         .requestMatchers("/api/market/**", "/api/yoda/**").permitAll()
-                        .requestMatchers("/api/auth/me", "/api/watchlist/**").authenticated()
+                        .requestMatchers("/api/auth/me", "/api/watchlists/**").authenticated()
                         .anyRequest().permitAll())
                 .oauth2ResourceServer(oauth2 -> oauth2.jwt(Customizer.withDefaults()));
         return http.build();

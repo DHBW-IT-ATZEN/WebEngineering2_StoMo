@@ -5,9 +5,8 @@ import jakarta.persistence.*;
 import lombok.Getter;
 import lombok.Setter;
 
-import java.util.HashSet;
+import java.util.ArrayList;
 import java.util.List;
-import java.util.Set;
 
 @Getter
 @Setter
@@ -24,7 +23,7 @@ public class User {
     @Column(nullable = false)
     private String firstname;
 
-    @Column(    nullable = false)
+    @Column(nullable = false)
     private String lastname;
 
     @Column(nullable = false)
@@ -35,5 +34,5 @@ public class User {
     private Status status;
 
     @OneToMany(mappedBy = "user", cascade = CascadeType.ALL, orphanRemoval = true)
-    private Set<PortfolioItem> portfolioItem = new HashSet<>();
+    private List<Watchlist> watchlists = new ArrayList<>();
 }
