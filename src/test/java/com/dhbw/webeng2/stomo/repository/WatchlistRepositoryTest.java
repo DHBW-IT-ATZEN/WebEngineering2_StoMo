@@ -9,6 +9,7 @@ import jakarta.persistence.PersistenceContext;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.data.domain.PageRequest;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.transaction.annotation.Transactional;
@@ -97,6 +98,22 @@ class WatchlistRepositoryTest {
         assertThat(itemRepo.existsByWatchlistIdAndSymbol(list.getId(), "MSFT")).isTrue();
         assertThat(itemRepo.existsByWatchlistIdAndSymbol(list.getId(), "TSLA")).isFalse();
         assertThat(itemRepo.findByIdAndWatchlistId(stored.getId(), list.getId())).isPresent();
+    }
+
+    @Test
+    void aggregatesMostWatchedSymbolsAcrossUsers() {
+        User a = newUser("agg-a@example.com");
+        User b = newUser("agg-b@example.com");
+        Watchlist listA = watchlistRepo.save(watchlist(a, "A", Instant.now()));
+        Watchlist listB = watchlistRepo.save(watchlist(b, "B", Instant.now()));
+        itemRepo.save(item(listA, "AAPL"));
+        itemRepo.save(item(listB, "AAPL"));
+        itemRepo.save(item(listB, "MSFT"));
+        em.flush();
+        em.clear();
+
+        assertThat(itemRepo.countDistinctSymbols()).isEqualTo(2);
+        assertThat(itemRepo.findTopSymbols(PageRequest.of(0, 1))).containsExactly("AAPL");
     }
 
     private User newUser(String email) {

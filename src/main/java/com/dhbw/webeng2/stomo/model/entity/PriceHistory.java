@@ -31,4 +31,8 @@ public class PriceHistory {
 
     @Column(nullable = false)
     private Instant fetchedAt;
+
+    /** Optimistic-locking version — coordinates concurrent refreshes across backend instances. */
+    @Version
+    private Long version;
 }

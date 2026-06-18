@@ -1,0 +1,53 @@
+name: Security scan
+
+# Dependency vulnerability scan. Runs on a schedule + on demand (not on every push) so it
+# never slows or blocks the normal CI build. Report-only: it uploads an artifact rather than
+# failing the build, which keeps it useful without false-failing on a bleeding-edge stack.
+on:
+  schedule:
+    - cron: '0 6 * * 1'   # every Monday 06:00 UTC
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  owasp-dependency-check:
+    name: OWASP dependency-check
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up JDK 21
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '21'
+          cache: maven
+
+      # Persist the (large) NVD database between runs so it isn't re-downloaded each time.
+      - name: Cache NVD database
+        uses: actions/cache@v4
+        with:
+          path: ~/.m2/repository/org/owasp/dependency-check-data
+          key: owasp-nvd-${{ github.run_id }}
+          restore-keys: owasp-nvd-
+
+      - name: Run OWASP dependency-check (report-only)
+        env:
+          # Optional: add an NVD_API_KEY repo secret to avoid NVD rate-limiting (much faster).
+          NVD_API_KEY: ${{ secrets.NVD_API_KEY }}
+        run: |
+          chmod +x ./mvnw
+          ./mvnw -B org.owasp:dependency-check-maven:check \
+            -DfailBuildOnCVSS=11 \
+            -Dformats=HTML,JSON \
+            -DnvdApiKey="${NVD_API_KEY}"
+
+      - name: Upload report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: dependency-check-report
+          path: target/dependency-check-report.*
+          if-no-files-found: ignore
