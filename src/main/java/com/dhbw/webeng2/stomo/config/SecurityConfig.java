@@ -4,6 +4,7 @@ import com.nimbusds.jose.jwk.source.ImmutableSecret;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.core.env.Environment;
 import org.springframework.security.config.Customizer;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
@@ -20,10 +21,12 @@ import org.springframework.security.web.SecurityFilterChain;
 import javax.crypto.SecretKey;
 import javax.crypto.spec.SecretKeySpec;
 import java.nio.charset.StandardCharsets;
+import java.util.List;
 
 /**
- * Stateless JWT security. The market dashboard, auth and yoda endpoints are public;
- * only the watchlist is protected. Tokens are HS256-signed with a symmetric secret
+ * Stateless JWT security. The market/auth/yoda endpoints and the API docs are public; every
+ * other endpoint — watchlists, /auth/me, and anything added later — requires authentication
+ * by default (default-deny). Tokens are HS256-signed with a symmetric secret
  * ({@code app.jwt.secret}) and validated by the resource-server filter on every request.
  *
  * CSRF is disabled on purpose: the token travels in the {@code Authorization} header
@@ -33,10 +36,23 @@ import java.nio.charset.StandardCharsets;
 @EnableWebSecurity
 public class SecurityConfig {
 
+    /** The committed dev fallback in application.properties — never acceptable under 'prod'. */
+    private static final String DEV_DEFAULT_SECRET = "dev-secret-change-me-please-0123456789-abcdefghij";
+
     private final String jwtSecret;
 
-    public SecurityConfig(@Value("${app.jwt.secret}") String jwtSecret) {
+    public SecurityConfig(@Value("${app.jwt.secret}") String jwtSecret, Environment environment) {
         this.jwtSecret = jwtSecret;
+        if (jwtSecret == null || jwtSecret.getBytes(StandardCharsets.UTF_8).length < 32) {
+            throw new IllegalStateException(
+                    "app.jwt.secret must be at least 32 bytes (256 bit) for HS256 — set a strong JWT_SECRET.");
+        }
+        boolean prod = List.of(environment.getActiveProfiles()).contains("prod");
+        if (prod && DEV_DEFAULT_SECRET.equals(jwtSecret)) {
+            throw new IllegalStateException(
+                    "Refusing to start under the 'prod' profile with the built-in dev JWT secret. "
+                            + "Set a strong, unique JWT_SECRET environment variable.");
+        }
     }
 
     @Bean
@@ -47,8 +63,9 @@ public class SecurityConfig {
                 .authorizeHttpRequests(auth -> auth
                         .requestMatchers("/api/auth/register", "/api/auth/login").permitAll()
                         .requestMatchers("/api/market/**", "/api/yoda/**").permitAll()
+                        .requestMatchers("/v3/api-docs/**", "/swagger-ui/**", "/swagger-ui.html").permitAll()
                         .requestMatchers("/api/auth/me", "/api/watchlists/**").authenticated()
-                        .anyRequest().permitAll())
+                        .anyRequest().authenticated())
                 .oauth2ResourceServer(oauth2 -> oauth2.jwt(Customizer.withDefaults()));
         return http.build();
     }
