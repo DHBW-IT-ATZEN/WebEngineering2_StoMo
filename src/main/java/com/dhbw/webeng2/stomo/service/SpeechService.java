@@ -5,7 +5,7 @@ import org.springframework.stereotype.Service;
 
 @Service
 public class SpeechService {
-    @Value("${YODA_API_KEY}")
+    @Value("${api.key.yoda:}")
     private String apiKey;
 
     public void printKey() {

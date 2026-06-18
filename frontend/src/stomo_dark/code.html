@@ -1,0 +1,296 @@
+<!DOCTYPE html>
+
+<html class="dark" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Architectural Ledger | AAPL.US</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&amp;family=Manrope:wght@300;400;600;700;800&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    "colors": {
+                        "on-tertiary-fixed-variant": "#6b3b00",
+                        "on-error-container": "#ffdad6",
+                        "primary-fixed": "#5af8fb",
+                        "inverse-on-surface": "#283044",
+                        "surface-container-high": "#222a3d",
+                        "surface": "#0b1326",
+                        "on-primary-fixed": "#002020",
+                        "surface-variant": "#2d3449",
+                        "inverse-primary": "#00696b",
+                        "error": "#ffb4ab",
+                        "on-background": "#dae2fd",
+                        "outline": "#859493",
+                        "outline-variant": "#3b4949",
+                        "on-secondary": "#1e333c",
+                        "surface-dim": "#0b1326",
+                        "surface-container": "#171f33",
+                        "secondary-fixed": "#cfe6f2",
+                        "tertiary": "#ffcb9e",
+                        "surface-container-highest": "#2d3449",
+                        "on-primary-container": "#005354",
+                        "on-tertiary-fixed": "#2d1600",
+                        "primary-fixed-dim": "#2ddbde",
+                        "on-error": "#690005",
+                        "on-surface-variant": "#bac9c9",
+                        "on-primary": "#003738",
+                        "tertiary-fixed": "#ffdcc0",
+                        "surface-bright": "#31394d",
+                        "secondary-fixed-dim": "#b4cad6",
+                        "background": "#0b1326",
+                        "tertiary-container": "#ffa54a",
+                        "on-secondary-fixed-variant": "#354a53",
+                        "primary-container": "#00ced1",
+                        "error-container": "#93000a",
+                        "on-tertiary-container": "#6f3d00",
+                        "on-secondary-fixed": "#071e27",
+                        "secondary": "#b4cad6",
+                        "surface-container-lowest": "#060e20",
+                        "secondary-container": "#374c56",
+                        "surface-tint": "#2ddbde",
+                        "surface-container-low": "#131b2e",
+                        "inverse-surface": "#dae2fd",
+                        "tertiary-fixed-dim": "#ffb876",
+                        "on-surface": "#dae2fd",
+                        "primary": "#47eaed",
+                        "on-tertiary": "#4b2800",
+                        "on-primary-fixed-variant": "#004f51",
+                        "on-secondary-container": "#a6bcc7"
+                    },
+                    "borderRadius": {
+                        "DEFAULT": "0.125rem",
+                        "lg": "0.25rem",
+                        "xl": "0.5rem",
+                        "full": "0.75rem"
+                    },
+                    "fontFamily": {
+                        "headline": ["Manrope"],
+                        "display": ["Manrope"],
+                        "body": ["Inter"],
+                        "label": ["Inter"]
+                    }
+                },
+            },
+        }
+    </script>
+<style>
+        body { font-family: 'Inter', sans-serif; }
+        .font-headline { font-family: 'Manrope', sans-serif; }
+        .material-symbols-outlined {
+            font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+        }
+    </style>
+</head>
+<body class="bg-background text-on-surface selection:bg-primary/30">
+<header class="bg-surface/90 backdrop-blur-md flex justify-between items-center px-8 py-6 w-full max-w-[1920px] mx-auto sticky top-0 z-50 border-b border-outline-variant/30">
+<div class="flex items-center gap-4">
+<span class="material-symbols-outlined text-primary text-3xl" style="font-variation-settings: 'FILL' 1;">account_balance_wallet</span>
+<h1 class="font-['Manrope'] text-2xl font-bold tracking-tight text-on-surface">Architectural Ledger</h1>
+</div>
+<nav class="hidden md:flex items-center gap-10">
+<a class="text-primary border-b-2 border-primary pb-1 cursor-pointer active:scale-95 transition-all" href="#">Market</a>
+<a class="text-on-surface-variant font-medium hover:text-primary px-3 py-1 rounded transition-colors duration-300" href="#">Portfolio</a>
+<a class="text-on-surface-variant font-medium hover:text-primary px-3 py-1 rounded transition-colors duration-300" href="#">Watchlist</a>
+<a class="text-on-surface-variant font-medium hover:text-primary px-3 py-1 rounded transition-colors duration-300" href="#">Settings</a>
+</nav>
+<div class="flex items-center gap-6">
+<div class="flex items-center gap-3 bg-surface-container-high px-4 py-2 rounded-full cursor-pointer hover:bg-surface-container-highest transition-colors">
+<span class="text-xs font-bold uppercase tracking-widest text-primary">Zen Mode</span>
+<div class="w-10 h-5 bg-primary/20 rounded-full relative p-1 flex items-center justify-end border border-primary/30">
+<div class="w-3 h-3 bg-primary rounded-full shadow-sm"></div>
+</div>
+<span class="material-symbols-outlined text-sm text-primary" style="font-variation-settings: 'FILL' 1;">diamond</span>
+</div>
+</div>
+</header>
+<main class="max-w-[1920px] mx-auto px-8 py-10 grid grid-cols-1 lg:grid-cols-12 gap-10 min-h-[calc(100vh-100px)] mb-20">
+<section class="lg:col-span-8 flex flex-col gap-8">
+<div class="flex flex-col gap-2">
+<div class="flex items-baseline gap-4">
+<h2 class="text-5xl font-extrabold font-headline tracking-tighter text-on-surface">AAPL.US</h2>
+<span class="text-primary font-headline font-bold text-xl">+2.45%</span>
+</div>
+<p class="text-on-surface-variant font-medium tracking-wide uppercase text-sm">Apple Inc. • Nasdaq Global Select Market</p>
+</div>
+<div class="bg-surface-container-lowest rounded-xl aspect-[16/9] flex items-center justify-center relative overflow-hidden group shadow-2xl border border-outline-variant/10">
+<div class="absolute top-6 left-6 flex items-center gap-4 z-10">
+<div class="flex gap-1">
+<span class="px-3 py-1 bg-primary text-on-primary text-xs font-bold rounded-sm">LIVE</span>
+</div>
+<div class="flex bg-surface-container/60 backdrop-blur-md rounded-lg p-1 border border-outline-variant/30">
+<button class="px-3 py-1 text-[10px] font-bold rounded bg-primary text-on-primary">1H</button>
+<button class="px-3 py-1 text-[10px] font-bold rounded text-on-surface-variant hover:bg-primary/20 hover:text-primary transition-colors">4H</button>
+<button class="px-3 py-1 text-[10px] font-bold rounded text-on-surface-variant hover:bg-primary/20 hover:text-primary transition-colors">1D</button>
+<button class="px-3 py-1 text-[10px] font-bold rounded text-on-surface-variant hover:bg-primary/20 hover:text-primary transition-colors">1W</button>
+<button class="px-3 py-1 text-[10px] font-bold rounded text-on-surface-variant hover:bg-primary/20 hover:text-primary transition-colors">1M</button>
+</div>
+</div>
+<div class="w-full h-full p-8 pt-24 flex items-end justify-between gap-1">
+<!-- Grid lines -->
+<div class="absolute inset-0 flex flex-col justify-between p-8 pointer-events-none opacity-10">
+<div class="border-t border-on-surface w-full"></div>
+<div class="border-t border-on-surface w-full"></div>
+<div class="border-t border-on-surface w-full"></div>
+<div class="border-t border-on-surface w-full"></div>
+<div class="border-t border-on-surface w-full"></div>
+</div>
+<!-- Simulated Candlesticks with Dark Theme Contrast -->
+<div class="flex-1 flex flex-col items-center gap-1 h-full justify-end group/bar">
+<div class="w-px h-12 bg-tertiary/30"></div>
+<div class="w-full max-w-[24px] h-[40%] bg-tertiary/80 shadow-[0_0_15px_rgba(255,203,158,0.2)] rounded-sm group-hover/bar:bg-tertiary transition-colors"></div>
+<div class="w-px h-8 bg-tertiary/30"></div>
+</div>
+<div class="flex-1 flex flex-col items-center gap-1 h-full justify-end group/bar">
+<div class="w-px h-16 bg-primary/30"></div>
+<div class="w-full max-w-[24px] h-[60%] bg-primary/80 shadow-[0_0_15px_rgba(71,234,237,0.2)] rounded-sm group-hover/bar:bg-primary transition-colors"></div>
+<div class="w-px h-10 bg-primary/30"></div>
+</div>
+<div class="flex-1 flex flex-col items-center gap-1 h-full justify-end group/bar">
+<div class="w-px h-10 bg-primary/30"></div>
+<div class="w-full max-w-[24px] h-[45%] bg-primary/80 shadow-[0_0_15px_rgba(71,234,237,0.2)] rounded-sm group-hover/bar:bg-primary transition-colors"></div>
+<div class="w-px h-14 bg-primary/30"></div>
+</div>
+<div class="flex-1 flex flex-col items-center gap-1 h-full justify-end group/bar">
+<div class="w-px h-20 bg-tertiary/30"></div>
+<div class="w-full max-w-[24px] h-[30%] bg-tertiary/80 shadow-[0_0_15px_rgba(255,203,158,0.2)] rounded-sm group-hover/bar:bg-tertiary transition-colors"></div>
+<div class="w-px h-12 bg-tertiary/30"></div>
+</div>
+<div class="flex-1 flex flex-col items-center gap-1 h-full justify-end group/bar">
+<div class="w-px h-8 bg-primary/30"></div>
+<div class="w-full max-w-[24px] h-[70%] bg-primary/80 shadow-[0_0_15px_rgba(71,234,237,0.2)] rounded-sm group-hover/bar:bg-primary transition-colors"></div>
+<div class="w-px h-12 bg-primary/30"></div>
+</div>
+<div class="flex-1 flex flex-col items-center gap-1 h-full justify-end group/bar">
+<div class="w-px h-14 bg-primary/30"></div>
+<div class="w-full max-w-[24px] h-[55%] bg-primary/80 shadow-[0_0_15px_rgba(71,234,237,0.2)] rounded-sm group-hover/bar:bg-primary transition-colors"></div>
+<div class="w-px h-10 bg-primary/30"></div>
+</div>
+<div class="flex-1 flex flex-col items-center gap-1 h-full justify-end group/bar">
+<div class="w-px h-10 bg-tertiary/30"></div>
+<div class="w-full max-w-[24px] h-[35%] bg-tertiary/80 shadow-[0_0_15px_rgba(255,203,158,0.2)] rounded-sm group-hover/bar:bg-tertiary transition-colors"></div>
+<div class="w-px h-20 bg-tertiary/30"></div>
+</div>
+<div class="flex-1 flex flex-col items-center gap-1 h-full justify-end group/bar">
+<div class="w-px h-24 bg-primary/30"></div>
+<div class="w-full max-w-[24px] h-[65%] bg-primary/80 shadow-[0_0_15px_rgba(71,234,237,0.2)] rounded-sm group-hover/bar:bg-primary transition-colors"></div>
+<div class="w-px h-16 bg-primary/30"></div>
+</div>
+<div class="flex-1 flex flex-col items-center gap-1 h-full justify-end group/bar">
+<div class="w-px h-12 bg-primary/30"></div>
+<div class="w-full max-w-[24px] h-[80%] bg-primary/80 shadow-[0_0_15px_rgba(71,234,237,0.2)] rounded-sm group-hover/bar:bg-primary transition-colors"></div>
+<div class="w-px h-10 bg-primary/30"></div>
+</div>
+</div>
+<div class="absolute bottom-8 right-8 flex gap-3 z-10">
+<button class="bg-surface-container/80 backdrop-blur-xl p-3 rounded-xl border border-outline-variant/30 hover:bg-primary/20 hover:border-primary/50 transition-all group">
+<span class="material-symbols-outlined text-primary">zoom_in</span>
+</button>
+<button class="bg-surface-container/80 backdrop-blur-xl p-3 rounded-xl border border-outline-variant/30 hover:bg-primary/20 hover:border-primary/50 transition-all group">
+<span class="material-symbols-outlined text-primary">brush</span>
+</button>
+</div>
+</div>
+<div class="grid grid-cols-4 gap-6">
+<div class="bg-surface-container-low p-6 rounded-xl border-l-4 border-primary/30 shadow-sm transition-all hover:border-primary">
+<p class="text-on-surface-variant text-[10px] uppercase font-bold tracking-[0.1em] mb-1">Open</p>
+<p class="text-xl font-headline font-bold text-on-surface">$189.43</p>
+</div>
+<div class="bg-surface-container-low p-6 rounded-xl border-l-4 border-transparent shadow-sm transition-all hover:border-primary/50">
+<p class="text-on-surface-variant text-[10px] uppercase font-bold tracking-[0.1em] mb-1">High</p>
+<p class="text-xl font-headline font-bold text-on-surface">$192.67</p>
+</div>
+<div class="bg-surface-container-low p-6 rounded-xl border-l-4 border-transparent shadow-sm transition-all hover:border-primary/50">
+<p class="text-on-surface-variant text-[10px] uppercase font-bold tracking-[0.1em] mb-1">Low</p>
+<p class="text-xl font-headline font-bold text-on-surface">$188.12</p>
+</div>
+<div class="bg-surface-container-low p-6 rounded-xl border-l-4 border-transparent shadow-sm transition-all hover:border-primary/50">
+<p class="text-on-surface-variant text-[10px] uppercase font-bold tracking-[0.1em] mb-1">Vol</p>
+<p class="text-xl font-headline font-bold text-on-surface">52.4M</p>
+</div>
+</div>
+</section>
+<section class="lg:col-span-4 flex flex-col gap-10">
+<div class="flex flex-col gap-6">
+<div class="flex items-center justify-between">
+<h3 class="font-headline text-xl font-bold tracking-tight text-on-surface">Executive Intelligence</h3>
+<span class="material-symbols-outlined text-primary text-sm">insights</span>
+</div>
+<div class="bg-surface-container rounded-2xl p-8 flex flex-col gap-8 shadow-2xl relative overflow-hidden border border-outline-variant/10">
+<div class="absolute top-0 right-0 w-32 h-32 bg-primary/5 rounded-full -mr-16 -mt-16 blur-3xl"></div>
+<div class="flex justify-between items-center group">
+<div>
+<p class="text-on-surface-variant text-[10px] uppercase font-bold tracking-[0.15em] mb-1">Market Cap</p>
+<p class="text-2xl font-headline font-extrabold text-on-surface">$3.02T</p>
+</div>
+<div class="w-12 h-12 bg-surface-container-high rounded-xl flex items-center justify-center border border-outline-variant/20">
+<span class="material-symbols-outlined text-primary text-xl">stat_3</span>
+</div>
+</div>
+<div class="grid grid-cols-2 gap-8">
+<div>
+<p class="text-on-surface-variant text-[10px] uppercase font-bold tracking-[0.15em] mb-1">P/E Ratio</p>
+<p class="text-xl font-headline font-bold text-on-surface">31.45</p>
+</div>
+<div>
+<p class="text-on-surface-variant text-[10px] uppercase font-bold tracking-[0.15em] mb-1">Div Yield</p>
+<p class="text-xl font-headline font-bold text-on-surface">0.52%</p>
+</div>
+</div>
+<div class="flex flex-col gap-3">
+<div class="flex justify-between items-end">
+<p class="text-on-surface-variant text-[10px] uppercase font-bold tracking-[0.15em]">52W Range</p>
+<p class="text-[10px] font-bold text-on-surface">$124.17 — $198.23</p>
+</div>
+<div class="h-2 bg-surface-container-high rounded-full overflow-hidden flex items-center border border-outline-variant/10">
+<div class="h-full bg-primary w-[82%] rounded-full shadow-[0_0_10px_rgba(71,234,237,0.4)]"></div>
+</div>
+</div>
+<button class="w-full py-4 rounded-xl bg-primary text-on-primary font-bold text-xs uppercase tracking-[0.2em] shadow-lg shadow-primary/10 hover:brightness-110 active:scale-[0.98] transition-all">
+                        Execute Transaction
+                    </button>
+</div>
+</div>
+<div class="flex flex-col gap-6">
+<div class="flex items-center justify-between border-b border-outline-variant/20 pb-2">
+<h3 class="font-headline text-xl font-bold tracking-tight text-on-surface">Corporate Dossier</h3>
+<span class="material-symbols-outlined text-primary text-sm">history_edu</span>
+</div>
+<div class="space-y-4">
+<p class="text-on-surface-variant leading-relaxed font-body text-sm">
+                        Apple Inc. designs, manufactures, and markets smartphones, personal computers, tablets, wearables, and accessories worldwide. The company offers iPhone, a line of smartphones; Mac, a line of personal computers; iPad, a line of multi-purpose tablets; and wearables, home, and accessories comprising AirPods, Apple TV, Apple Watch, and Beats products.
+                    </p>
+<p class="text-on-surface-variant leading-relaxed font-body text-sm">
+                        As a pillar of the global technology sector, Apple's architectural strategy focuses on ecosystem lock-in and high-margin services, including the App Store, Apple Music, and Apple Pay.
+                    </p>
+</div>
+<div class="flex flex-wrap gap-2 pt-4">
+<span class="px-3 py-1.5 bg-surface-container-low rounded-full text-[10px] font-bold uppercase tracking-wider text-primary border border-primary/20 hover:bg-primary/10 cursor-default transition-colors">Technology</span>
+<span class="px-3 py-1.5 bg-surface-container-low rounded-full text-[10px] font-bold uppercase tracking-wider text-primary border border-primary/20 hover:bg-primary/10 cursor-default transition-colors">Consumer Electronics</span>
+<span class="px-3 py-1.5 bg-surface-container-low rounded-full text-[10px] font-bold uppercase tracking-wider text-primary border border-primary/20 hover:bg-primary/10 cursor-default transition-colors">Blue Chip</span>
+</div>
+</div>
+</section>
+</main>
+<nav class="fixed bottom-0 left-0 w-full z-50 flex justify-around items-center h-20 pb-safe bg-surface/80 backdrop-blur-xl border-t border-outline-variant/20 shadow-[0_-8px_30px_rgba(0,0,0,0.3)]">
+<a class="flex flex-col items-center justify-center text-primary bg-primary/10 rounded-xl px-6 py-2 active:scale-90 transition-transform duration-150" href="#">
+<span class="material-symbols-outlined mb-1" style="font-variation-settings: 'FILL' 1;">insert_chart</span>
+<span class="font-['Inter'] text-[10px] uppercase tracking-[0.03em] font-semibold">Market</span>
+</a>
+<a class="flex flex-col items-center justify-center text-on-surface-variant px-6 py-2 hover:text-primary transition-all active:scale-90" href="#">
+<span class="material-symbols-outlined mb-1">account_balance</span>
+<span class="font-['Inter'] text-[10px] uppercase tracking-[0.03em] font-semibold">Portfolio</span>
+</a>
+<a class="flex flex-col items-center justify-center text-on-surface-variant px-6 py-2 hover:text-primary transition-all active:scale-90" href="#">
+<span class="material-symbols-outlined mb-1">visibility</span>
+<span class="font-['Inter'] text-[10px] uppercase tracking-[0.03em] font-semibold">Watchlist</span>
+</a>
+<a class="flex flex-col items-center justify-center text-on-surface-variant px-6 py-2 hover:text-primary transition-all active:scale-90" href="#">
+<span class="material-symbols-outlined mb-1">settings</span>
+<span class="font-['Inter'] text-[10px] uppercase tracking-[0.03em] font-semibold">Settings</span>
+</a>
+</nav>
+</body></html>

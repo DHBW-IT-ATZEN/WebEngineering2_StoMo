@@ -1,0 +1,442 @@
+import { useEffect, useMemo, useRef, useState } from 'react';
+import {
+  AlertTriangle,
+  BarChart3,
+  BookmarkPlus,
+  CandlestickChart,
+  Check,
+  ChevronDown,
+  Info,
+  LineChart,
+  Loader2,
+  RefreshCw,
+  TrendingUp,
+} from 'lucide-react';
+import { useMarketData } from '../hooks/useMarketData';
+import {
+  formatMarketCap,
+  formatNumber,
+  formatPercent,
+  formatPrice,
+  formatVolume,
+  formatYield,
+} from '../utils/format';
+import T from './T';
+import PriceChart from './PriceChart';
+import { latestDayVolume, resampleSeries } from '../utils/resample';
+import { LIVE_APIS } from '../config';
+import { useAuth } from '../auth/useAuth';
+import { addSymbol, getWatchlists } from '../api/watchlists';
+
+const CHART_TYPE_KEY = 'stomo-chart-type';
+const TIMEFRAMES = [
+  { label: '1D', value: 'INTRADAY' },
+  { label: '1W', value: 'WEEKLY' },
+  { label: '1M', value: 'MONTHLY' },
+];
+
+export default function Dashboard({ symbol, onRequireLogin }) {
+  const [timeframe, setTimeframe] = useState('WEEKLY');
+  const [chartType, setChartType] = useState(() => {
+    const stored = window.localStorage.getItem(CHART_TYPE_KEY);
+    return stored === 'line' || stored === 'candles' ? stored : 'candles';
+  });
+  const { quote, series, overview, loading, error, reload } = useMarketData(symbol);
+
+  useEffect(() => {
+    window.localStorage.setItem(CHART_TYPE_KEY, chartType);
+  }, [chartType]);
+
+  // Resample the one cached 30-min series locally — switching timeframe makes no request.
+  const bars = useMemo(() => resampleSeries(series, timeframe), [series, timeframe]);
+  const latestVolume = useMemo(() => latestDayVolume(series), [series]);
+
+  // Price + change% derived from the Yahoo series so they're available with or without Finnhub:
+  //  - latestPrice = close of the most recent fine (10-min) bar
+  //  - intervalOpen = open of the first candle of the currently-selected view (so the % matches the chart)
+  const latestPrice = useMemo(() => {
+    const fine = series?.fine;
+    if (fine && fine.length > 0) return fine[fine.length - 1].close;
+    const coarse = series?.coarse;
+    if (coarse && coarse.length > 0) return coarse[coarse.length - 1].close;
+    return null;
+  }, [series]);
+  const intervalOpen = bars.length > 0 ? bars[0].open ?? bars[0].close : null;
+  const pctChange =
+    latestPrice != null && intervalOpen != null && intervalOpen !== 0
+      ? ((latestPrice - intervalOpen) / intervalOpen) * 100
+      : null;
+
+  const up = (pctChange ?? 0) >= 0;
+  const trendColor = up ? 'text-primary' : 'text-error';
+  const name = overview?.name || quote?.symbol || symbol;
+  const exchange = overview?.exchange;
+
+  const low52 = overview?.week52Low;
+  const high52 = overview?.week52High;
+  const rangePos =
+    low52 != null && high52 != null && high52 > low52 && latestPrice != null
+      ? Math.min(Math.max(((latestPrice - low52) / (high52 - low52)) * 100, 0), 100)
+      : null;
+
+  const tags = [overview?.sector, exchange].filter(Boolean);
+
+  if (error) {
+    return <ErrorState symbol={symbol} message={error} onRetry={reload} />;
+  }
+  if (loading && !quote && bars.length === 0) {
+    return <LoadingState symbol={symbol} />;
+  }
+
+  return (
+    <main className="max-w-[1920px] mx-auto px-4 sm:px-8 py-10 grid grid-cols-1 lg:grid-cols-12 gap-10 mb-24 lg:mb-10">
+      {/* LEFT: chart + stats */}
+      <section className="lg:col-span-8 flex flex-col gap-8">
+        <div className="flex items-start justify-between gap-4">
+          <div className="flex flex-col gap-2">
+            <div className="flex items-baseline gap-4 flex-wrap">
+              <h2 className="text-4xl sm:text-5xl font-extrabold font-headline tracking-tighter">
+                {quote?.symbol ?? symbol}
+              </h2>
+              <span className={`font-headline font-semibold text-base ${trendColor}`}>
+                {formatPrice(latestPrice)}
+              </span>
+              <span className={`font-headline font-bold text-xl ${trendColor}`}>
+                {formatPercent(pctChange)}
+              </span>
+              {!LIVE_APIS && (
+                <span
+                  title="Finnhub + Alpha Vantage calls are disabled in src/config.js. Yahoo (chart) still works."
+                  className="px-2 py-0.5 text-[10px] uppercase font-bold tracking-widest text-on-surface-variant bg-surface-container-high rounded-full"
+                >
+                  API saving
+                </span>
+              )}
+            </div>
+            <p className="text-on-surface-variant font-medium tracking-wide uppercase text-xs sm:text-sm">
+              {name}
+              {exchange ? ` • ${exchange}` : ''}
+            </p>
+          </div>
+
+          <AddToWatchlistButton
+            key={quote?.symbol ?? symbol}
+            symbol={quote?.symbol ?? symbol}
+            onRequireLogin={onRequireLogin}
+          />
+        </div>
+
+        {/* CHART */}
+        <div className="bg-surface-container-lowest rounded-xl aspect-[16/9] relative overflow-hidden shadow-2xl border border-outline-variant/10 group">
+          <div className="absolute top-6 left-6 flex items-center gap-4 z-10">
+            <span className="px-3 py-1 bg-primary text-on-primary text-[10px] font-bold rounded-sm shadow-lg shadow-primary/20">
+              <T>LIVE</T>
+            </span>
+            <div className="flex bg-surface-container/60 backdrop-blur-md rounded-lg p-1 border border-outline-variant/30">
+              {TIMEFRAMES.map((tf) => (
+                <button
+                  key={tf.value}
+                  type="button"
+                  onClick={() => setTimeframe(tf.value)}
+                  className={`px-3 py-1 text-[10px] font-bold rounded transition-colors ${
+                    timeframe === tf.value
+                      ? 'bg-primary text-on-primary'
+                      : 'text-on-surface-variant hover:text-primary hover:bg-primary/10'
+                  }`}
+                >
+                  {tf.label}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          <PriceChart bars={bars} type={chartType} view={timeframe} />
+
+          {loading && (
+            <div className="absolute top-6 right-6 z-10">
+              <Loader2 className="w-5 h-5 text-primary animate-spin" />
+            </div>
+          )}
+
+          <div className="absolute bottom-8 right-8 z-10">
+            <div className="flex bg-surface-container/80 backdrop-blur-xl rounded-xl p-1 border border-outline-variant/30">
+              <button
+                type="button"
+                onClick={() => setChartType('candles')}
+                aria-pressed={chartType === 'candles'}
+                title="Candlestick chart"
+                className={`p-2 rounded-lg transition-colors ${
+                  chartType === 'candles' ? 'bg-primary text-on-primary' : 'text-on-surface-variant hover:text-primary'
+                }`}
+              >
+                <CandlestickChart className="w-5 h-5" />
+              </button>
+              <button
+                type="button"
+                onClick={() => setChartType('line')}
+                aria-pressed={chartType === 'line'}
+                title="Line chart"
+                className={`p-2 rounded-lg transition-colors ${
+                  chartType === 'line' ? 'bg-primary text-on-primary' : 'text-on-surface-variant hover:text-primary'
+                }`}
+              >
+                <LineChart className="w-5 h-5" />
+              </button>
+            </div>
+          </div>
+        </div>
+
+        {/* QUICK STATS */}
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-6">
+          <StatCard label="Open" value={formatPrice(quote?.open)} highlighted />
+          <StatCard label="High" value={formatPrice(quote?.high)} />
+          <StatCard label="Low" value={formatPrice(quote?.low)} />
+          <StatCard label="Vol" value={formatVolume(latestVolume)} />
+        </div>
+      </section>
+
+      {/* RIGHT: intelligence + dossier */}
+      <section className="lg:col-span-4 flex flex-col gap-10">
+        <div className="flex flex-col gap-6">
+          <div className="flex items-center justify-between">
+            <h3 className="font-headline text-xl font-bold tracking-tight">
+              <T>Executive Intelligence</T>
+            </h3>
+            <TrendingUp className="text-primary w-5 h-5" />
+          </div>
+
+          <div className="bg-surface-container rounded-2xl p-8 flex flex-col gap-8 shadow-2xl relative overflow-hidden border border-outline-variant/10">
+            <div className="absolute top-0 right-0 w-32 h-32 bg-primary/5 rounded-full -mr-16 -mt-16 blur-3xl" />
+
+            <div className="flex justify-between items-center">
+              <div>
+                <p className="text-on-surface-variant text-[10px] uppercase font-bold tracking-[0.15em] mb-1">
+                  <T>Market Cap</T>
+                </p>
+                <p className="text-2xl font-headline font-extrabold">{formatMarketCap(overview?.marketCap)}</p>
+              </div>
+              <div className="w-12 h-12 bg-surface-container-high rounded-xl flex items-center justify-center border border-outline-variant/20">
+                <BarChart3 className="text-primary" />
+              </div>
+            </div>
+
+            <div className="grid grid-cols-2 gap-8">
+              <div>
+                <p className="text-on-surface-variant text-[10px] uppercase font-bold tracking-[0.15em] mb-1">
+                  <T>P/E Ratio</T>
+                </p>
+                <p className="text-xl font-headline font-bold">{formatNumber(overview?.peRatio)}</p>
+              </div>
+              <div>
+                <p className="text-on-surface-variant text-[10px] uppercase font-bold tracking-[0.15em] mb-1">
+                  <T>Div Yield</T>
+                </p>
+                <p className="text-xl font-headline font-bold">{formatYield(overview?.dividendYield)}</p>
+              </div>
+            </div>
+
+            <div className="flex flex-col gap-3">
+              <div className="flex justify-between items-end">
+                <p className="text-on-surface-variant text-[10px] uppercase font-bold tracking-[0.15em]">
+                  <T>52W Range</T>
+                </p>
+                <p className="text-[10px] font-bold">
+                  {formatPrice(low52)} — {formatPrice(high52)}
+                </p>
+              </div>
+              <div className="h-2 bg-surface-container-high rounded-full overflow-hidden border border-outline-variant/10">
+                <div
+                  className="h-full bg-primary rounded-full shadow-[0_0_10px_rgb(var(--primary)/0.4)] transition-all"
+                  style={{ width: `${rangePos ?? 0}%` }}
+                />
+              </div>
+            </div>
+
+          </div>
+        </div>
+
+        {/* DOSSIER */}
+        <div className="flex flex-col gap-6">
+          <div className="flex items-center justify-between border-b border-outline-variant/20 pb-2">
+            <h3 className="font-headline text-xl font-bold tracking-tight">
+              <T>Corporate Dossier</T>
+            </h3>
+            <Info className="text-primary w-5 h-5" />
+          </div>
+          <p className="text-sm text-on-surface-variant leading-relaxed">
+            <T>{overview?.description || 'No company profile available for this symbol.'}</T>
+          </p>
+          {tags.length > 0 && (
+            <div className="flex flex-wrap gap-2">
+              {tags.map((tag) => (
+                <span
+                  key={tag}
+                  className="px-3 py-1.5 bg-surface-container-low rounded-full text-[10px] font-bold uppercase tracking-wider text-primary border border-primary/20"
+                >
+                  {tag}
+                </span>
+              ))}
+            </div>
+          )}
+        </div>
+      </section>
+    </main>
+  );
+}
+
+function AddToWatchlistButton({ symbol, onRequireLogin }) {
+  const { user } = useAuth();
+  const [open, setOpen] = useState(false);
+  const [lists, setLists] = useState(null); // null until first loaded
+  const [status, setStatus] = useState('idle'); // idle | loading | adding | added | error
+  const [message, setMessage] = useState(null);
+  const boxRef = useRef(null);
+
+  useEffect(() => {
+    function handleOutside(event) {
+      if (boxRef.current && !boxRef.current.contains(event.target)) setOpen(false);
+    }
+    document.addEventListener('mousedown', handleOutside);
+    return () => document.removeEventListener('mousedown', handleOutside);
+  }, []);
+
+  async function toggle() {
+    if (!user) {
+      onRequireLogin();
+      return;
+    }
+    const next = !open;
+    setOpen(next);
+    if (next && lists === null) {
+      setStatus('loading');
+      try {
+        const data = await getWatchlists();
+        setLists(Array.isArray(data) ? data : []);
+        setStatus('idle');
+      } catch (err) {
+        setStatus('error');
+        setMessage(err.message || 'Could not load your lists');
+      }
+    }
+  }
+
+  async function add(list) {
+    setStatus('adding');
+    setMessage(null);
+    try {
+      await addSymbol(list.id, symbol);
+      setStatus('added');
+      setOpen(false);
+    } catch (err) {
+      setStatus('error');
+      setMessage(err.message || 'Could not add');
+    }
+  }
+
+  const added = status === 'added';
+  return (
+    <div ref={boxRef} className="relative flex flex-col items-end gap-1 shrink-0">
+      <button
+        type="button"
+        onClick={toggle}
+        disabled={status === 'adding'}
+        title={user ? 'Add to a watchlist' : 'Log in to save to a watchlist'}
+        className={`flex items-center gap-2 px-4 py-2 rounded-xl font-bold text-xs uppercase tracking-wider transition-all active:scale-95 disabled:cursor-default ${
+          added
+            ? 'bg-primary/15 text-primary'
+            : 'bg-surface-container-high text-on-surface hover:text-primary border border-outline-variant/30'
+        }`}
+      >
+        {status === 'adding' ? (
+          <Loader2 className="w-4 h-4 animate-spin" />
+        ) : added ? (
+          <Check className="w-4 h-4" />
+        ) : (
+          <BookmarkPlus className="w-4 h-4" />
+        )}
+        <T>{added ? 'Added' : 'Watch'}</T>
+        {user && <ChevronDown className="w-3.5 h-3.5 opacity-70" />}
+      </button>
+
+      {open && (
+        <div className="absolute top-full right-0 mt-2 w-56 bg-surface-container-high/95 backdrop-blur-md rounded-xl shadow-2xl border border-outline-variant/20 z-50 py-2">
+          <p className="px-4 py-1 text-[10px] uppercase font-bold tracking-[0.15em] text-on-surface-variant">
+            Add {symbol} to…
+          </p>
+          {status === 'loading' ? (
+            <div className="flex items-center justify-center py-4">
+              <Loader2 className="w-4 h-4 text-primary animate-spin" />
+            </div>
+          ) : lists && lists.length > 0 ? (
+            <ul>
+              {lists.map((list) => (
+                <li key={list.id}>
+                  <button
+                    type="button"
+                    onClick={() => add(list)}
+                    className="w-full flex items-center justify-between gap-2 px-4 py-2 hover:bg-primary/10 transition-colors text-left"
+                  >
+                    <span className="font-semibold text-sm text-on-surface truncate">{list.name}</span>
+                    <span className="text-[11px] text-on-surface-variant shrink-0">{list.items?.length ?? 0}</span>
+                  </button>
+                </li>
+              ))}
+            </ul>
+          ) : (
+            <p className="px-4 py-2 text-xs text-on-surface-variant"><T>No lists found.</T></p>
+          )}
+        </div>
+      )}
+
+      {status === 'error' && message && (
+        <span className="text-[11px] text-error max-w-[12rem] text-right">{message}</span>
+      )}
+    </div>
+  );
+}
+
+function StatCard({ label, value, highlighted = false }) {
+  return (
+    <div
+      className={`bg-surface-container-low p-6 rounded-xl border-l-4 shadow-sm transition-all hover:border-primary ${
+        highlighted ? 'border-primary/30' : 'border-transparent'
+      }`}
+    >
+      <p className="text-on-surface-variant text-[10px] uppercase font-bold tracking-[0.1em] mb-1">
+        <T>{label}</T>
+      </p>
+      <p className="text-xl font-headline font-bold">{value}</p>
+    </div>
+  );
+}
+
+function LoadingState({ symbol }) {
+  return (
+    <div className="max-w-[1920px] mx-auto px-8 py-32 flex flex-col items-center justify-center gap-4 text-on-surface-variant">
+      <Loader2 className="w-8 h-8 text-primary animate-spin" />
+      <p className="text-sm uppercase tracking-widest font-bold">Loading {symbol}…</p>
+    </div>
+  );
+}
+
+function ErrorState({ symbol, message, onRetry }) {
+  return (
+    <div className="max-w-[1920px] mx-auto px-8 py-32 flex flex-col items-center justify-center gap-5 text-center">
+      <div className="w-14 h-14 rounded-2xl bg-error/10 flex items-center justify-center">
+        <AlertTriangle className="w-7 h-7 text-error" />
+      </div>
+      <div className="flex flex-col gap-1">
+        <p className="font-headline font-bold text-lg">Could not load {symbol}</p>
+        <p className="text-sm text-on-surface-variant max-w-md">{message}</p>
+      </div>
+      <button
+        type="button"
+        onClick={onRetry}
+        className="flex items-center gap-2 px-5 py-3 rounded-xl bg-primary text-on-primary font-bold text-xs uppercase tracking-[0.2em] hover:brightness-110 active:scale-95 transition-all"
+      >
+        <RefreshCw className="w-4 h-4" />
+        <T>Retry</T>
+      </button>
+    </div>
+  );
+}
