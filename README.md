@@ -144,6 +144,30 @@ docker compose up -d db
 cd frontend && npm install && npm run dev   # proxies /api → :8080
 ```
 
+### Option C — serve at https://stomo.dev (local HTTPS, optional)
+
+For a production-style URL instead of `localhost`, the stack can run behind nginx TLS at
+**https://stomo.dev**, using a locally-trusted [mkcert](https://github.com/FiloSottile/mkcert)
+certificate. The default `docker compose up` (Option A) stays on plain HTTP, so this is opt-in.
+
+```bash
+# 1) one-time: trust a local CA
+mkcert -install
+
+# 2) generate the cert + key into frontend/certs/  (details: frontend/certs/README.md)
+cd frontend/certs && mkcert stomo.dev && cd ../..
+
+# 3) map the hostname to localhost (needs admin/sudo):  127.0.0.1 stomo.dev
+#    Windows: C:\Windows\System32\drivers\etc\hosts   ·   macOS/Linux: /etc/hosts
+
+# 4) start with the HTTPS override
+docker compose -f docker-compose.yml -f docker-compose.https.yml up -d --build
+# open https://stomo.dev
+```
+
+`.dev` is HSTS-preloaded, so browsers force HTTPS — the mkcert certificate is what lets it load
+without warnings.
+
 ### Environment variables (optional)
 
 Put these in a `.env` file (loaded by Docker Compose) or your shell. **All are optional** —
@@ -169,7 +193,7 @@ MySQL defaults (see `application.properties`): db `stomo_db`, user `stomo_user`,
 ```
 
 The suite runs against an **in-memory H2** database (via the `test` profile) — no MySQL and no
-API keys required, so it is fully self-contained and CI-friendly. **27 tests** cover three
+API keys required, so it is fully self-contained and CI-friendly. **38 tests** cover three
 layers:
 
 - **Unit** (Mockito) — watchlist business logic (CRUD, validation, conflicts) and JWT issuing.

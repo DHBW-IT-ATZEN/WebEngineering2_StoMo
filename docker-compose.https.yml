@@ -1,0 +1,18 @@
+# HTTPS override — serve the app at https://stomo.dev with a locally-trusted (mkcert) cert.
+#
+#   1) Generate the cert + key (see frontend/certs/README.md):
+#        mkcert -install && cd frontend/certs && mkcert stomo.dev
+#   2) Map the hostname:  add "127.0.0.1 stomo.dev" to your hosts file.
+#   3) Start the stack:
+#        docker compose -f docker-compose.yml -f docker-compose.https.yml up -d --build
+#
+# The default `docker compose up` (without this file) still serves plain HTTP on :5173.
+services:
+  frontend:
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      # Swap the baked HTTP config for the TLS one, and mount the certificate (read-only).
+      - ./frontend/nginx-https.conf:/etc/nginx/conf.d/default.conf:ro
+      - ./frontend/certs:/etc/nginx/certs:ro
