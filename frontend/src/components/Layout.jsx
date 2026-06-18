@@ -1,51 +1,55 @@
 import { useState } from 'react';
+import { Outlet, useLocation, useNavigate } from 'react-router-dom';
 import { BarChart3, Bookmark, LogIn, LogOut, Wallet } from 'lucide-react';
 import SymbolSearch from './SymbolSearch';
 import ThemeToggle from './ThemeToggle';
-import Dashboard from './Dashboard';
-import Watchlist from './Watchlist';
 import AuthModal from './AuthModal';
 import T from './T';
 import { useAuth } from '../auth/useAuth';
 
 /**
- * Shared layout: the header (logo, Market/Watchlist nav, ticker search, theme toggle,
- * login/logout) plus the active view. Owns the selected symbol and view, and hosts the
- * auth modal. Only the watchlist requires login — the market view is public.
+ * In-app shell: the header (brand, Market/Watchlist nav, ticker search, theme toggle,
+ * login/logout) plus the routed view via <Outlet />. Owns the selected symbol and the auth
+ * modal, shared with child routes through the outlet context. Only the watchlist needs login.
  */
-export default function AppShell() {
+export default function Layout() {
   const { user, logout } = useAuth();
-  const [view, setView] = useState('market');
+  const navigate = useNavigate();
+  const { pathname } = useLocation();
   const [symbol, setSymbol] = useState('AAPL');
   const [authOpen, setAuthOpen] = useState(false);
-  const [postLoginView, setPostLoginView] = useState(null);
+  const [afterAuth, setAfterAuth] = useState(null);
 
-  function openAuth(nextView = null) {
-    setPostLoginView(nextView);
+  function requireLogin(redirectTo = null) {
+    setAfterAuth(redirectTo);
     setAuthOpen(true);
   }
 
   function handleAuthSuccess() {
     setAuthOpen(false);
-    if (postLoginView) setView(postLoginView);
-    setPostLoginView(null);
-  }
-
-  function goWatchlist() {
-    if (user) setView('watchlist');
-    else openAuth('watchlist');
+    const dest = afterAuth;
+    setAfterAuth(null);
+    if (dest) navigate(dest);
   }
 
   function selectSymbol(value) {
     setSymbol(value);
-    setView('market');
+    navigate('/app');
   }
+
+  function goWatchlist() {
+    if (user) navigate('/watchlist');
+    else requireLogin('/watchlist');
+  }
+
+  const onMarket = pathname.startsWith('/app');
+  const onWatchlist = pathname.startsWith('/watchlist');
 
   return (
     <div className="min-h-screen bg-background text-on-surface font-body">
       <header className="bg-surface/90 backdrop-blur-md sticky top-0 z-50 border-b border-outline-variant/30">
         <div className="max-w-[1920px] mx-auto px-4 sm:px-8 py-5 flex justify-between items-center gap-4">
-          <button type="button" onClick={() => setView('market')} className="flex items-center gap-4">
+          <button type="button" onClick={() => navigate('/app')} className="flex items-center gap-4">
             <Wallet className="text-primary w-7 h-7" />
             <h1 className="font-headline text-xl sm:text-2xl font-bold tracking-tight">
               <T>Architectural Ledger</T>
@@ -53,8 +57,8 @@ export default function AppShell() {
           </button>
 
           <nav className="hidden lg:flex items-center gap-10">
-            <NavTab label="Market" active={view === 'market'} onClick={() => setView('market')} />
-            <NavTab label="Watchlist" active={view === 'watchlist'} onClick={goWatchlist} />
+            <NavTab label="Market" active={onMarket} onClick={() => navigate('/app')} />
+            <NavTab label="Watchlist" active={onWatchlist} onClick={goWatchlist} />
           </nav>
 
           <div className="flex items-center gap-3 sm:gap-4">
@@ -78,7 +82,7 @@ export default function AppShell() {
             ) : (
               <button
                 type="button"
-                onClick={() => openAuth(null)}
+                onClick={() => requireLogin()}
                 className="flex items-center gap-1.5 px-3 sm:px-4 py-2 rounded-lg bg-primary text-on-primary font-bold text-xs uppercase tracking-wider hover:brightness-110 active:scale-95 transition-all"
               >
                 <LogIn className="w-4 h-4" />
@@ -89,15 +93,11 @@ export default function AppShell() {
         </div>
       </header>
 
-      {view === 'market' ? (
-        <Dashboard symbol={symbol} onRequireLogin={() => openAuth(null)} />
-      ) : (
-        <Watchlist onBrowse={() => setView('market')} />
-      )}
+      <Outlet context={{ symbol, selectSymbol, requireLogin }} />
 
       <nav className="lg:hidden fixed bottom-0 left-0 w-full z-50 h-20 bg-surface/80 backdrop-blur-xl border-t border-outline-variant/20 flex justify-around items-center px-4">
-        <MobileNavItem icon={<BarChart3 />} label="Market" active={view === 'market'} onClick={() => setView('market')} />
-        <MobileNavItem icon={<Bookmark />} label="Watchlist" active={view === 'watchlist'} onClick={goWatchlist} />
+        <MobileNavItem icon={<BarChart3 />} label="Market" active={onMarket} onClick={() => navigate('/app')} />
+        <MobileNavItem icon={<Bookmark />} label="Watchlist" active={onWatchlist} onClick={goWatchlist} />
       </nav>
 
       {authOpen && <AuthModal onClose={() => setAuthOpen(false)} onSuccess={handleAuthSuccess} />}

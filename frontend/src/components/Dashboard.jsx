@@ -1,10 +1,11 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import {
   AlertTriangle,
   BarChart3,
   BookmarkPlus,
   CandlestickChart,
   Check,
+  ChevronDown,
   Info,
   LineChart,
   Loader2,
@@ -25,7 +26,7 @@ import PriceChart from './PriceChart';
 import { latestDayVolume, resampleSeries } from '../utils/resample';
 import { LIVE_APIS } from '../config';
 import { useAuth } from '../auth/useAuth';
-import { addToWatchlist } from '../api/watchlist';
+import { addSymbol, getWatchlists } from '../api/watchlists';
 
 const CHART_TYPE_KEY = 'stomo-chart-type';
 const TIMEFRAMES = [
@@ -285,19 +286,47 @@ export default function Dashboard({ symbol, onRequireLogin }) {
 
 function AddToWatchlistButton({ symbol, onRequireLogin }) {
   const { user } = useAuth();
-  const [status, setStatus] = useState('idle'); // idle | adding | added | error
+  const [open, setOpen] = useState(false);
+  const [lists, setLists] = useState(null); // null until first loaded
+  const [status, setStatus] = useState('idle'); // idle | loading | adding | added | error
   const [message, setMessage] = useState(null);
+  const boxRef = useRef(null);
 
-  async function handleClick() {
+  useEffect(() => {
+    function handleOutside(event) {
+      if (boxRef.current && !boxRef.current.contains(event.target)) setOpen(false);
+    }
+    document.addEventListener('mousedown', handleOutside);
+    return () => document.removeEventListener('mousedown', handleOutside);
+  }, []);
+
+  async function toggle() {
     if (!user) {
       onRequireLogin();
       return;
     }
+    const next = !open;
+    setOpen(next);
+    if (next && lists === null) {
+      setStatus('loading');
+      try {
+        const data = await getWatchlists();
+        setLists(Array.isArray(data) ? data : []);
+        setStatus('idle');
+      } catch (err) {
+        setStatus('error');
+        setMessage(err.message || 'Could not load your lists');
+      }
+    }
+  }
+
+  async function add(list) {
     setStatus('adding');
     setMessage(null);
     try {
-      await addToWatchlist(symbol);
+      await addSymbol(list.id, symbol);
       setStatus('added');
+      setOpen(false);
     } catch (err) {
       setStatus('error');
       setMessage(err.message || 'Could not add');
@@ -306,12 +335,12 @@ function AddToWatchlistButton({ symbol, onRequireLogin }) {
 
   const added = status === 'added';
   return (
-    <div className="flex flex-col items-end gap-1 shrink-0">
+    <div ref={boxRef} className="relative flex flex-col items-end gap-1 shrink-0">
       <button
         type="button"
-        onClick={handleClick}
-        disabled={status === 'adding' || added}
-        title={user ? 'Add to watchlist' : 'Log in to save to your watchlist'}
+        onClick={toggle}
+        disabled={status === 'adding'}
+        title={user ? 'Add to a watchlist' : 'Log in to save to a watchlist'}
         className={`flex items-center gap-2 px-4 py-2 rounded-xl font-bold text-xs uppercase tracking-wider transition-all active:scale-95 disabled:cursor-default ${
           added
             ? 'bg-primary/15 text-primary'
@@ -326,7 +355,39 @@ function AddToWatchlistButton({ symbol, onRequireLogin }) {
           <BookmarkPlus className="w-4 h-4" />
         )}
         <T>{added ? 'Added' : 'Watch'}</T>
+        {user && <ChevronDown className="w-3.5 h-3.5 opacity-70" />}
       </button>
+
+      {open && (
+        <div className="absolute top-full right-0 mt-2 w-56 bg-surface-container-high/95 backdrop-blur-md rounded-xl shadow-2xl border border-outline-variant/20 z-50 py-2">
+          <p className="px-4 py-1 text-[10px] uppercase font-bold tracking-[0.15em] text-on-surface-variant">
+            Add {symbol} to…
+          </p>
+          {status === 'loading' ? (
+            <div className="flex items-center justify-center py-4">
+              <Loader2 className="w-4 h-4 text-primary animate-spin" />
+            </div>
+          ) : lists && lists.length > 0 ? (
+            <ul>
+              {lists.map((list) => (
+                <li key={list.id}>
+                  <button
+                    type="button"
+                    onClick={() => add(list)}
+                    className="w-full flex items-center justify-between gap-2 px-4 py-2 hover:bg-primary/10 transition-colors text-left"
+                  >
+                    <span className="font-semibold text-sm text-on-surface truncate">{list.name}</span>
+                    <span className="text-[11px] text-on-surface-variant shrink-0">{list.items?.length ?? 0}</span>
+                  </button>
+                </li>
+              ))}
+            </ul>
+          ) : (
+            <p className="px-4 py-2 text-xs text-on-surface-variant"><T>No lists found.</T></p>
+          )}
+        </div>
+      )}
+
       {status === 'error' && message && (
         <span className="text-[11px] text-error max-w-[12rem] text-right">{message}</span>
       )}
