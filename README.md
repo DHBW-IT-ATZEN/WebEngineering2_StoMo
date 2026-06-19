@@ -126,10 +126,14 @@ central `@RestControllerAdvice`.
 ### Option A — full stack with Docker (recommended)
 
 ```bash
-docker compose up -d --build      # MySQL + backend (:8080) + frontend (:5173)
-# open http://localhost:5173
+docker compose up -d --build      # MySQL + backend (:8080) + frontend (:80)
+# open http://localhost   (or http://stomo.lab — see the note below)
 docker compose down               # stop everything
 ```
+
+**Nicer URL (optional):** to use `http://stomo.lab` instead of `localhost`, add a hosts entry
+`127.0.0.1 stomo.lab` — `C:\Windows\System32\drivers\etc\hosts` on Windows, `/etc/hosts` on
+macOS/Linux (needs admin/sudo). No certificate needed; it's plain HTTP.
 
 ### Option B — dev mode (MySQL in Docker, app native, hot reload)
 
