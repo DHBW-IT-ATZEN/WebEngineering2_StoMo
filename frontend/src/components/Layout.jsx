@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { Outlet, useLocation, useNavigate } from 'react-router-dom';
-import { BarChart3, Bookmark, LogIn, LogOut, Wallet } from 'lucide-react';
+import { BarChart3, Bookmark, CandlestickChart, LogIn, LogOut } from 'lucide-react';
 import SymbolSearch from './SymbolSearch';
 import ThemeToggle from './ThemeToggle';
 import AuthModal from './AuthModal';
@@ -54,10 +54,10 @@ export default function Layout() {
     <div className="min-h-screen bg-background text-on-surface font-body">
       <header className="bg-surface/90 backdrop-blur-md sticky top-0 z-50 border-b border-outline-variant/30">
         <div className="max-w-[1920px] mx-auto px-4 sm:px-8 py-5 flex justify-between items-center gap-4">
-          <button type="button" onClick={() => navigate('/app')} className="flex items-center gap-4">
-            <Wallet className="text-primary w-7 h-7" />
+          <button type="button" onClick={() => navigate('/')} className="flex items-center gap-4">
+            <CandlestickChart className="text-primary w-7 h-7" />
             <h1 className="font-headline text-xl sm:text-2xl font-bold tracking-tight">
-              <T>Architectural Ledger</T>
+              <T>Stock Monitor</T>
             </h1>
           </button>
 

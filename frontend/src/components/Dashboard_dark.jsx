@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { 
-  Wallet, Diamond, Zap, TrendingUp, 
+  CandlestickChart, Diamond, Zap, TrendingUp,
   Search, Eye, Settings, BarChart3, 
   Info, Landmark, ZoomIn, Brush 
 } from 'lucide-react';
@@ -15,8 +15,8 @@ const Dashboard = () => {
       <header className="bg-surface/90 backdrop-blur-md sticky top-0 z-50 border-b border-outline-variant/10">
         <div className="max-w-[1920px] mx-auto px-8 py-6 flex justify-between items-center">
           <div className="flex items-center gap-4">
-            <Wallet className="text-primary w-8 h-8" />
-            <h1 className="font-headline text-2xl font-bold tracking-tight">Architectural Ledger</h1>
+            <CandlestickChart className="text-primary w-8 h-8" />
+            <h1 className="font-headline text-2xl font-bold tracking-tight">Stock Monitor</h1>
           </div>
           
           <nav className="hidden md:flex items-center gap-8">

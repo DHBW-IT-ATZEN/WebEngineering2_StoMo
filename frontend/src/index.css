@@ -3,7 +3,7 @@
 @tailwind utilities;
 
 /* ===== Generated theme tokens (RGB channels so Tailwind alpha utilities work) ===== */
-/* Default = Dark Mode ("Architectural Ledger") */
+/* Default = Dark Mode ("Stock Monitor") */
 :root {
   --on-tertiary-fixed-variant: 107 59 0;
   --on-error-container: 255 218 214;

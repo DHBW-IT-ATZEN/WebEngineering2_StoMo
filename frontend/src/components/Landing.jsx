@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { ArrowRight, Bookmark, Building2, LineChart, LogIn, Wallet } from 'lucide-react';
+import { ArrowRight, Bookmark, Building2, CandlestickChart, LineChart, LogIn } from 'lucide-react';
 import { useAuth } from '../auth/useAuth';
 import { getMovers } from '../api/marketData';
 import { formatPercent, formatPrice } from '../utils/format';
@@ -52,8 +52,8 @@ export default function Landing() {
       <header className="border-b border-outline-variant/20">
         <div className="max-w-[1100px] mx-auto px-6 py-5 flex items-center justify-between gap-4">
           <div className="flex items-center gap-3">
-            <Wallet className="text-primary w-7 h-7" />
-            <span className="font-headline text-xl font-bold tracking-tight"><T>Architectural Ledger</T></span>
+            <CandlestickChart className="text-primary w-7 h-7" />
+            <span className="font-headline text-xl font-bold tracking-tight"><T>Stock Monitor</T></span>
           </div>
           <div className="flex items-center gap-3">
             <ThemeToggle />
