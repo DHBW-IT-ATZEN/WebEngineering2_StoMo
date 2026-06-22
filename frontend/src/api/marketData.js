@@ -47,3 +47,6 @@ export const getOverview = (symbol) => avRequest(`/overview/${enc(symbol)}`);
 
 /** Alpha Vantage: ticker search -> SearchTickerDto[] */
 export const searchSymbols = (query) => avRequest(`/search?q=${enc(query)}`);
+
+/** Homepage ticker banner: top-watched (or curated default) symbols with live quotes -> TickerDto[] */
+export const getMovers = () => request('/movers');

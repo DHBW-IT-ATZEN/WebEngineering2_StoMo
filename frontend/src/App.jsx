@@ -1,16 +1,24 @@
-import { BrowserRouter, Navigate, Route, Routes, useOutletContext } from 'react-router-dom';
+import { useEffect } from 'react';
+import { BrowserRouter, Navigate, Route, Routes, useOutletContext, useParams } from 'react-router-dom';
 import { ThemeProvider } from './theme/ThemeProvider';
 import { YodaTextProvider } from './theme/YodaTextProvider';
 import { AuthProvider } from './auth/AuthProvider';
 import Landing from './components/Landing';
 import Layout from './components/Layout';
 import Dashboard from './components/Dashboard';
+import MarketEntry from './components/MarketEntry';
 import WatchlistPage from './components/WatchlistPage';
 
-/** /app — the stock dashboard, wired to the shared symbol + login handler from the Layout. */
+/** /app/:symbol — the stock dashboard for the symbol in the URL (shareable/bookmarkable). */
 function MarketView() {
-  const { symbol, requireLogin } = useOutletContext();
-  return <Dashboard symbol={symbol} onRequireLogin={() => requireLogin()} />;
+  const { symbol } = useParams();
+  const { requireLogin } = useOutletContext();
+  const upper = (symbol || '').toUpperCase();
+  // Remember the last stock viewed so switching tabs (Market <-> Watchlist) resumes it.
+  useEffect(() => {
+    if (upper) window.localStorage.setItem('stomo-last-symbol', upper);
+  }, [upper]);
+  return <Dashboard symbol={upper} onRequireLogin={() => requireLogin()} />;
 }
 
 function App() {
@@ -22,7 +30,8 @@ function App() {
             <Routes>
               <Route path="/" element={<Landing />} />
               <Route element={<Layout />}>
-                <Route path="/app" element={<MarketView />} />
+                <Route path="/app" element={<MarketEntry />} />
+                <Route path="/app/:symbol" element={<MarketView />} />
                 <Route path="/watchlist" element={<WatchlistPage />} />
               </Route>
               <Route path="*" element={<Navigate to="/" replace />} />

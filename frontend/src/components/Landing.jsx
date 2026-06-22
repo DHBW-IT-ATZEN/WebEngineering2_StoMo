@@ -1,18 +1,21 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { ArrowRight, Bookmark, Building2, LineChart, LogIn, Wallet } from 'lucide-react';
+import { ArrowRight, Bookmark, Building2, CandlestickChart, LineChart, LogIn } from 'lucide-react';
 import { useAuth } from '../auth/useAuth';
+import { getMovers } from '../api/marketData';
+import { formatPercent, formatPrice } from '../utils/format';
 import ThemeToggle from './ThemeToggle';
 import AuthModal from './AuthModal';
 import T from './T';
 
-const TICKERS = [
-  { s: 'AAPL', p: '227.52', c: '+1.24%', up: true },
-  { s: 'MSFT', p: '481.10', c: '+0.86%', up: true },
-  { s: 'TSLA', p: '244.40', c: '-2.13%', up: false },
-  { s: 'NVDA', p: '174.05', c: '+3.02%', up: true },
-  { s: 'AMZN', p: '231.88', c: '-0.42%', up: false },
-  { s: 'GOOGL', p: '201.42', c: '+1.10%', up: true },
+// Shown until /api/market/movers responds (and if it's unreachable) so the strip is never empty.
+const FALLBACK_TICKERS = [
+  { symbol: 'AAPL', price: 227.52, changePct: 1.24 },
+  { symbol: 'MSFT', price: 481.10, changePct: 0.86 },
+  { symbol: 'NVDA', price: 174.05, changePct: 3.02 },
+  { symbol: 'TSLA', price: 244.40, changePct: -2.13 },
+  { symbol: 'AMZN', price: 231.88, changePct: -0.42 },
+  { symbol: 'GOOGL', price: 201.42, changePct: 1.10 },
 ];
 
 const FEATURES = [
@@ -26,14 +29,31 @@ export default function Landing() {
   const { user } = useAuth();
   const navigate = useNavigate();
   const [authOpen, setAuthOpen] = useState(false);
+  const [tickers, setTickers] = useState(FALLBACK_TICKERS);
+
+  useEffect(() => {
+    let active = true;
+    getMovers()
+      .then((data) => {
+        if (active && Array.isArray(data) && data.length > 0) setTickers(data);
+      })
+      .catch(() => { /* keep the fallback strip */ });
+    return () => { active = false; };
+  }, []);
 
   return (
     <div className="min-h-screen bg-background text-on-surface font-body flex flex-col">
+      <style>{`
+        @keyframes stomo-marquee { from { transform: translateX(0); } to { transform: translateX(-50%); } }
+        .stomo-marquee { animation: stomo-marquee 45s linear infinite; }
+        .stomo-marquee:hover { animation-play-state: paused; }
+      `}</style>
+
       <header className="border-b border-outline-variant/20">
         <div className="max-w-[1100px] mx-auto px-6 py-5 flex items-center justify-between gap-4">
           <div className="flex items-center gap-3">
-            <Wallet className="text-primary w-7 h-7" />
-            <span className="font-headline text-xl font-bold tracking-tight"><T>Architectural Ledger</T></span>
+            <CandlestickChart className="text-primary w-7 h-7" />
+            <span className="font-headline text-xl font-bold tracking-tight"><T>Stock Monitor</T></span>
           </div>
           <div className="flex items-center gap-3">
             <ThemeToggle />
@@ -60,14 +80,16 @@ export default function Landing() {
         </div>
       </header>
 
-      {/* ticker strip */}
-      <div className="border-b border-outline-variant/20 bg-surface/40 overflow-x-auto">
-        <div className="flex gap-8 px-6 py-3 whitespace-nowrap text-sm">
-          {TICKERS.map((t) => (
-            <span key={t.s} className="flex items-center gap-2">
-              <span className="font-headline font-bold">{t.s}</span>
-              <span className="text-on-surface-variant">{t.p}</span>
-              <span className={t.up ? 'text-primary' : 'text-error'}>{t.c}</span>
+      {/* Live ticker marquee (top-watched symbols, or a fallback set). */}
+      <div className="border-b border-outline-variant/20 bg-surface/40 overflow-hidden">
+        <div className="flex w-max gap-8 px-6 py-3 stomo-marquee">
+          {[...tickers, ...tickers].map((t, i) => (
+            <span key={`${t.symbol}-${i}`} className="flex items-center gap-2 text-sm">
+              <span className="font-headline font-bold">{t.symbol}</span>
+              <span className="text-on-surface-variant">{formatPrice(t.price)}</span>
+              <span className={(t.changePct ?? 0) >= 0 ? 'text-primary' : 'text-error'}>
+                {formatPercent(t.changePct)}
+              </span>
             </span>
           ))}
         </div>

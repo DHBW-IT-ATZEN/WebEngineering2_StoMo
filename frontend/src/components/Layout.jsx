@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { Outlet, useLocation, useNavigate } from 'react-router-dom';
-import { BarChart3, Bookmark, LogIn, LogOut, Wallet } from 'lucide-react';
+import { BarChart3, Bookmark, CandlestickChart, LogIn, LogOut } from 'lucide-react';
 import SymbolSearch from './SymbolSearch';
 import ThemeToggle from './ThemeToggle';
 import AuthModal from './AuthModal';
@@ -9,14 +9,14 @@ import { useAuth } from '../auth/useAuth';
 
 /**
  * In-app shell: the header (brand, Market/Watchlist nav, ticker search, theme toggle,
- * login/logout) plus the routed view via <Outlet />. Owns the selected symbol and the auth
- * modal, shared with child routes through the outlet context. Only the watchlist needs login.
+ * login/logout) plus the routed view via <Outlet />. The selected symbol lives in the URL
+ * (/app/:symbol); the auth modal and login handler are shared with child routes through the
+ * outlet context. Only the watchlist needs login.
  */
 export default function Layout() {
   const { user, logout } = useAuth();
   const navigate = useNavigate();
   const { pathname } = useLocation();
-  const [symbol, setSymbol] = useState('AAPL');
   const [authOpen, setAuthOpen] = useState(false);
   const [afterAuth, setAfterAuth] = useState(null);
 
@@ -33,8 +33,13 @@ export default function Layout() {
   }
 
   function selectSymbol(value) {
-    setSymbol(value);
-    navigate('/app');
+    navigate(`/app/${encodeURIComponent(value)}`);
+  }
+
+  // The Market tab resumes the last stock you looked at, rather than the search entry.
+  function goMarket() {
+    const last = window.localStorage.getItem('stomo-last-symbol');
+    navigate(last ? `/app/${encodeURIComponent(last)}` : '/app');
   }
 
   function goWatchlist() {
@@ -49,15 +54,15 @@ export default function Layout() {
     <div className="min-h-screen bg-background text-on-surface font-body">
       <header className="bg-surface/90 backdrop-blur-md sticky top-0 z-50 border-b border-outline-variant/30">
         <div className="max-w-[1920px] mx-auto px-4 sm:px-8 py-5 flex justify-between items-center gap-4">
-          <button type="button" onClick={() => navigate('/app')} className="flex items-center gap-4">
-            <Wallet className="text-primary w-7 h-7" />
+          <button type="button" onClick={() => navigate('/')} className="flex items-center gap-4">
+            <CandlestickChart className="text-primary w-7 h-7" />
             <h1 className="font-headline text-xl sm:text-2xl font-bold tracking-tight">
-              <T>Architectural Ledger</T>
+              <T>Stock Monitor</T>
             </h1>
           </button>
 
           <nav className="hidden lg:flex items-center gap-10">
-            <NavTab label="Market" active={onMarket} onClick={() => navigate('/app')} />
+            <NavTab label="Market" active={onMarket} onClick={goMarket} />
             <NavTab label="Watchlist" active={onWatchlist} onClick={goWatchlist} />
           </nav>
 
@@ -93,10 +98,10 @@ export default function Layout() {
         </div>
       </header>
 
-      <Outlet context={{ symbol, selectSymbol, requireLogin }} />
+      <Outlet context={{ selectSymbol, requireLogin }} />
 
       <nav className="lg:hidden fixed bottom-0 left-0 w-full z-50 h-20 bg-surface/80 backdrop-blur-xl border-t border-outline-variant/20 flex justify-around items-center px-4">
-        <MobileNavItem icon={<BarChart3 />} label="Market" active={onMarket} onClick={() => navigate('/app')} />
+        <MobileNavItem icon={<BarChart3 />} label="Market" active={onMarket} onClick={goMarket} />
         <MobileNavItem icon={<Bookmark />} label="Watchlist" active={onWatchlist} onClick={goWatchlist} />
       </nav>
 
