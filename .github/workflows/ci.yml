@@ -6,10 +6,15 @@ on:
 
 jobs:
   backend:
-    name: Backend — build & test
+    name: Backend — build, test & SonarCloud
     runs-on: ubuntu-latest
+    env:
+      # Mapped here so the analysis step can be skipped until the secret is configured.
+      SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
     steps:
       - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0          # full history -> accurate Sonar blame / new-code detection
 
       - name: Set up JDK 21
         uses: actions/setup-java@v4
@@ -18,10 +23,23 @@ jobs:
           java-version: '21'
           cache: maven
 
+      - name: Cache SonarCloud packages
+        uses: actions/cache@v4
+        with:
+          path: ~/.sonar/cache
+          key: ${{ runner.os }}-sonar
+          restore-keys: ${{ runner.os }}-sonar
+
       - name: Build & test (H2 profile, no external services needed)
         run: |
           chmod +x ./mvnw
-          ./mvnw -B clean verify
+          ./mvnw -B clean verify          # runs tests + produces the JaCoCo coverage report
+
+      - name: SonarCloud analysis
+        if: ${{ env.SONAR_TOKEN != '' }}   # skipped until SONAR_TOKEN is set in repo secrets
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}   # enables PR decoration
+        run: ./mvnw -B org.sonarsource.scanner.maven:sonar-maven-plugin:5.1.0.4751:sonar
 
   frontend:
     name: Frontend — lint & build
