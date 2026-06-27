@@ -19,16 +19,16 @@ lecture's SkyWatch example).
 │  Vite)   │                    │  Boot, JPA) │                │  Alpha Vantage · …   │
 └──────────┘                    │      │      │                └──────────────────────┘
                                 │      ▼      │
-                                │  ┌───────┐  │
-                                │  │ MySQL │  │   (H2 in-memory for tests)
-                                │  └───────┘  │
+                                │ ┌──────────┐│
+                                │ │PostgreSQL││  (H2 in-memory for tests)
+                                │ └──────────┘│
                                 └─────────────┘
 ```
 
 - **Frontend** — React 19 + Vite + Tailwind. Communicates **only** with the backend over `/api`.
 - **Backend** — Spring Boot 4 (Java 21) with a clean **Controller → Service → Repository**
   layering and Spring Data JPA.
-- **Database** — MySQL at runtime; in-memory **H2** for the test suite.
+- **Database** — PostgreSQL at runtime; in-memory **H2** for the test suite.
 - **Third-party** — the backend aggregates data from Finnhub, Yahoo Finance and Alpha Vantage
   (details below), plus an optional Yodish translation API.
 
@@ -40,7 +40,7 @@ lecture's SkyWatch example).
 |---|---|
 | Backend | Java 21, Spring Boot 4 (Web MVC, Data JPA, Validation, Security / OAuth2 Resource Server) |
 | Frontend | React 19, Vite, Tailwind CSS, lucide-react |
-| Database | MySQL 8 (runtime), H2 (tests) |
+| Database | PostgreSQL 16 (runtime), H2 (tests) |
 | Build | Maven (`mvnw` wrapper) / npm |
 | Auth | JWT (HS256), Spring Security |
 | Packaging | Docker + Docker Compose |
@@ -126,7 +126,7 @@ central `@RestControllerAdvice`.
 ### Option A — full stack with Docker (recommended)
 
 ```bash
-docker compose up -d --build      # MySQL + backend (:8080) + frontend (:80)
+docker compose up -d --build      # PostgreSQL + backend (:8080) + frontend (:80)
 # open http://localhost   (or http://stomo.lab — see the note below)
 docker compose down               # stop everything
 ```
@@ -135,7 +135,7 @@ docker compose down               # stop everything
 `127.0.0.1 stomo.lab` — `C:\Windows\System32\drivers\etc\hosts` on Windows, `/etc/hosts` on
 macOS/Linux (needs admin/sudo). No certificate needed; it's plain HTTP.
 
-### Option B — dev mode (MySQL in Docker, app native, hot reload)
+### Option B — dev mode (PostgreSQL in Docker, app native, hot reload)
 
 ```bash
 # 1) database only
@@ -185,8 +185,24 @@ the app boots without them; features that need a key simply stay dormant and the
 | `YODA_API_KEY` | Yodish translation | UI text shown untranslated (passthrough) |
 | `JWT_SECRET` | overrides the dev signing secret (≥ 32 chars) | a built-in dev secret is used |
 
-MySQL defaults (see `application.properties`): db `stomo_db`, user `stomo_user`, password
-`stomo_password`, port `3306`.
+PostgreSQL defaults (see `application.properties`): db `stomo_db`, user `stomo_user`, password
+`stomo_password`, port `5432`.
+
+### Migrating data from an old MySQL instance
+
+A fresh install needs nothing here — Hibernate creates the schema on first boot and the cache
+tables refill from the external APIs. Only if you have a pre-switch **MySQL** database whose data
+you want to keep:
+
+```bash
+docker compose up -d db                       # start the new PostgreSQL (host: stomo-postgres)
+# (the old MySQL container must still be running as "stomo-mysql" on the same network)
+./scripts/migrate-mysql-to-postgres.sh        # pgloader copies the entity tables + resets sequences
+```
+
+It uses [`scripts/mysql-to-postgres.load`](scripts/mysql-to-postgres.load): only entity-backed
+tables are copied (legacy `portfolio_items` / `translations` tables are skipped) and the identity
+sequences are reset so new inserts continue past the migrated ids.
 
 ---
 
@@ -196,8 +212,8 @@ MySQL defaults (see `application.properties`): db `stomo_db`, user `stomo_user`,
 ./mvnw test     # Windows: mvnw.cmd test
 ```
 
-The suite runs against an **in-memory H2** database (via the `test` profile) — no MySQL and no
-API keys required, so it is fully self-contained and CI-friendly. **38 tests** cover three
+The suite runs against an **in-memory H2** database (via the `test` profile) — no PostgreSQL and no
+API keys required, so it is fully self-contained and CI-friendly. **45 tests** cover three
 layers:
 
 - **Unit** (Mockito) — watchlist business logic (CRUD, validation, conflicts) and JWT issuing.
@@ -241,6 +257,8 @@ frontend/src/
 ## Bonus features implemented
 
 - ✅ **Authentication** with Spring Security + JWT
+- ✅ **OpenAPI / Swagger** docs (`/swagger-ui.html`)
 - ✅ **Docker** + Docker Compose for the whole stack
-- ✅ Test suite with **> 10 tests** across unit / integration / API
-- ✅ **MySQL** as the runtime database (H2 for tests)
+- ✅ **CI** (GitHub Actions) — builds & tests backend and frontend on every push
+- ✅ Test suite with **> 10 tests** (45) across unit / integration / API
+- ✅ **PostgreSQL** as the runtime database (H2 for tests)

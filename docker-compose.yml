@@ -1,20 +1,19 @@
 services:
-  # MySQL database
+  # PostgreSQL database
   db:
-    image: mysql:8.0
-    container_name: stomo-mysql
+    image: postgres:16
+    container_name: stomo-postgres
     restart: unless-stopped
     environment:
-      MYSQL_DATABASE: stomo_db
-      MYSQL_ROOT_PASSWORD: rootpassword
-      MYSQL_USER: stomo_user
-      MYSQL_PASSWORD: stomo_password
+      POSTGRES_DB: stomo_db
+      POSTGRES_USER: stomo_user
+      POSTGRES_PASSWORD: stomo_password
     ports:
-      - "3306:3306"
+      - "5432:5432"
     volumes:
-      - db_data:/var/lib/mysql
+      - pgdata:/var/lib/postgresql/data
     healthcheck:
-      test: ["CMD-SHELL", "mysqladmin ping -h 127.0.0.1 -u stomo_user -p$$MYSQL_PASSWORD --silent"]
+      test: ["CMD-SHELL", "pg_isready -U stomo_user -d stomo_db"]
       interval: 10s
       timeout: 5s
       retries: 5
@@ -34,12 +33,12 @@ services:
       # so a strong JWT_SECRET must be supplied via .env.
       - SPRING_PROFILES_ACTIVE=prod
       # Override the localhost DB URL from application.properties — use the compose-network "db" host.
-      - SPRING_DATASOURCE_URL=jdbc:mysql://db:3306/stomo_db?allowPublicKeyRetrieval=true&useSSL=false&serverTimezone=UTC
+      - SPRING_DATASOURCE_URL=jdbc:postgresql://db:5432/stomo_db
       - SPRING_DATASOURCE_USERNAME=stomo_user
       - SPRING_DATASOURCE_PASSWORD=stomo_password
     depends_on:
       db:
-        condition: service_healthy     # wait until MySQL is accepting connections
+        condition: service_healthy     # wait until Postgres is accepting connections
     # The image's HEALTHCHECK (Actuator /actuator/health) drives this service's health status.
 
   # Static frontend (Vite build) served by nginx, with /api proxied to the backend container
@@ -54,4 +53,4 @@ services:
         condition: service_healthy     # wait until the backend reports healthy
 
 volumes:
-  db_data:
+  pgdata:

@@ -1,0 +1,20 @@
+--
+-- pgloader job: one-shot migration of live data from the old MySQL database
+-- into PostgreSQL. Run via scripts/migrate-mysql-to-postgres.sh (see that file
+-- and README "Migrating ..." for the full procedure).
+--
+-- Only the tables backed by current JPA entities are copied; legacy tables left
+-- behind by older `ddl-auto=update` runs (portfolio_items, translations) are
+-- intentionally excluded. pgloader recreates the schema, copies the rows, and
+-- resets the identity sequences so new inserts continue past the migrated ids.
+--
+LOAD DATABASE
+     FROM     mysql://stomo_user:stomo_password@stomo-mysql:3306/stomo_db
+     INTO postgresql://stomo_user:stomo_password@stomo-postgres:5432/stomo_db
+
+ WITH include drop, create tables, create indexes, reset sequences, foreign keys
+
+INCLUDING ONLY TABLE NAMES MATCHING
+     'users', 'watchlists', 'watchlist_items',
+     'exchange_rate', 'price_history', 'yoda_translations'
+;
