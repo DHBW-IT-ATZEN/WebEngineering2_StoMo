@@ -3,9 +3,11 @@ import { Outlet, useLocation, useNavigate } from 'react-router-dom';
 import { BarChart3, Bookmark, CandlestickChart, LogIn, LogOut } from 'lucide-react';
 import SymbolSearch from './SymbolSearch';
 import ThemeToggle from './ThemeToggle';
+import LanguageSelect from './LanguageSelect';
 import AuthModal from './AuthModal';
 import T from './T';
 import { useAuth } from '../auth/useAuth';
+import { useCurrency } from '../currency/useCurrency';
 
 /**
  * In-app shell: the header (brand, Market/Watchlist nav, ticker search, theme toggle,
@@ -68,6 +70,8 @@ export default function Layout() {
 
           <div className="flex items-center gap-3 sm:gap-4">
             <SymbolSearch onSelect={selectSymbol} />
+            <LanguageSelect />
+            <CurrencySelect />
             <ThemeToggle />
             {user ? (
               <div className="flex items-center gap-2 sm:gap-3">
@@ -107,6 +111,24 @@ export default function Layout() {
 
       {authOpen && <AuthModal onClose={() => setAuthOpen(false)} onSuccess={handleAuthSuccess} />}
     </div>
+  );
+}
+
+function CurrencySelect() {
+  const { displayCurrency, setDisplayCurrency, options } = useCurrency();
+  const opts = options.includes(displayCurrency) ? options : [displayCurrency, ...options];
+  return (
+    <select
+      value={displayCurrency}
+      onChange={(event) => setDisplayCurrency(event.target.value)}
+      title="Display currency"
+      aria-label="Display currency"
+      className="bg-surface-container-high text-on-surface text-xs font-bold rounded-lg px-2 py-2.5 border border-outline-variant/30 cursor-pointer hover:text-primary focus:border-primary outline-none transition-colors"
+    >
+      {opts.map((code) => (
+        <option key={code} value={code}>{code}</option>
+      ))}
+    </select>
   );
 }
 

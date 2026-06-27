@@ -14,13 +14,14 @@ import {
 } from 'lucide-react';
 import { useMarketData } from '../hooks/useMarketData';
 import {
+  displaySymbol,
   formatMarketCap,
   formatNumber,
   formatPercent,
-  formatPrice,
   formatVolume,
   formatYield,
 } from '../utils/format';
+import { useCurrency } from '../currency/useCurrency';
 import T from './T';
 import PriceChart from './PriceChart';
 import { latestDayVolume, resampleSeries } from '../utils/resample';
@@ -35,6 +36,17 @@ const TIMEFRAMES = [
   { label: '1M', value: 'MONTHLY' },
 ];
 
+// Yahoo instrumentType -> human label (translated via <T>; see de.js).
+const TYPE_LABELS = {
+  EQUITY: 'Stock',
+  INDEX: 'Index',
+  ETF: 'ETF',
+  MUTUALFUND: 'Fund',
+  CURRENCY: 'Currency',
+  CRYPTOCURRENCY: 'Crypto',
+  FUTURE: 'Future',
+};
+
 export default function Dashboard({ symbol, onRequireLogin }) {
   const [timeframe, setTimeframe] = useState('WEEKLY');
   const [chartType, setChartType] = useState(() => {
@@ -42,6 +54,9 @@ export default function Dashboard({ symbol, onRequireLogin }) {
     return stored === 'line' || stored === 'candles' ? stored : 'candles';
   });
   const { quote, series, overview, loading, error, reload } = useMarketData(symbol);
+  const { formatMoney } = useCurrency();
+  const nativeCurrency = series?.currency;
+  const nativeType = series?.type;
 
   useEffect(() => {
     window.localStorage.setItem(CHART_TYPE_KEY, chartType);
@@ -69,8 +84,11 @@ export default function Dashboard({ symbol, onRequireLogin }) {
 
   const up = (pctChange ?? 0) >= 0;
   const trendColor = up ? 'text-primary' : 'text-error';
-  const name = overview?.name || quote?.symbol || symbol;
+  const shownSymbol = displaySymbol(quote?.symbol ?? symbol);
   const exchange = overview?.exchange;
+  // Only show the company name when it adds info (i.e. it isn't just the symbol again).
+  const companyName = overview?.name && overview.name !== shownSymbol ? overview.name : null;
+  const typeLabel = TYPE_LABELS[nativeType] || null;
 
   const low52 = overview?.week52Low;
   const high52 = overview?.week52High;
@@ -94,29 +112,40 @@ export default function Dashboard({ symbol, onRequireLogin }) {
       <section className="lg:col-span-8 flex flex-col gap-8">
         <div className="flex items-start justify-between gap-4">
           <div className="flex flex-col gap-2">
+            {/* Row 1: symbol + price + change */}
             <div className="flex items-baseline gap-4 flex-wrap">
               <h2 className="text-4xl sm:text-5xl font-extrabold font-headline tracking-tighter">
-                {quote?.symbol ?? symbol}
+                {shownSymbol}
               </h2>
               <span className={`font-headline font-semibold text-base ${trendColor}`}>
-                {formatPrice(latestPrice)}
+                {formatMoney(latestPrice, nativeCurrency, nativeType)}
               </span>
               <span className={`font-headline font-bold text-xl ${trendColor}`}>
                 {formatPercent(pctChange)}
               </span>
+            </div>
+            {/* Row 2: instrument type + (company name) + API-saving status */}
+            <div className="flex items-center gap-2 flex-wrap">
+              {typeLabel && (
+                <span className="px-2 py-0.5 rounded-full text-[10px] uppercase font-bold tracking-wider bg-surface-container-low text-primary border border-primary/20">
+                  <T>{typeLabel}</T>
+                </span>
+              )}
+              {companyName && (
+                <span className="text-on-surface-variant font-medium tracking-wide uppercase text-xs sm:text-sm">
+                  {companyName}
+                  {exchange ? ` • ${exchange}` : ''}
+                </span>
+              )}
               {!LIVE_APIS && (
                 <span
                   title="Finnhub + Alpha Vantage calls are disabled in src/config.js. Yahoo (chart) still works."
-                  className="px-2 py-0.5 text-[10px] uppercase font-bold tracking-widest text-on-surface-variant bg-surface-container-high rounded-full"
+                  className="px-2 py-0.5 text-[10px] uppercase font-bold tracking-widest text-white bg-[#800020] rounded-full"
                 >
                   API saving
                 </span>
               )}
             </div>
-            <p className="text-on-surface-variant font-medium tracking-wide uppercase text-xs sm:text-sm">
-              {name}
-              {exchange ? ` • ${exchange}` : ''}
-            </p>
           </div>
 
           <AddToWatchlistButton
@@ -188,9 +217,9 @@ export default function Dashboard({ symbol, onRequireLogin }) {
 
         {/* QUICK STATS */}
         <div className="grid grid-cols-2 md:grid-cols-4 gap-6">
-          <StatCard label="Open" value={formatPrice(quote?.open)} highlighted />
-          <StatCard label="High" value={formatPrice(quote?.high)} />
-          <StatCard label="Low" value={formatPrice(quote?.low)} />
+          <StatCard label="Open" value={formatMoney(quote?.open, nativeCurrency, nativeType)} highlighted />
+          <StatCard label="High" value={formatMoney(quote?.high, nativeCurrency, nativeType)} />
+          <StatCard label="Low" value={formatMoney(quote?.low, nativeCurrency, nativeType)} />
           <StatCard label="Vol" value={formatVolume(latestVolume)} />
         </div>
       </section>
@@ -241,7 +270,7 @@ export default function Dashboard({ symbol, onRequireLogin }) {
                   <T>52W Range</T>
                 </p>
                 <p className="text-[10px] font-bold">
-                  {formatPrice(low52)} — {formatPrice(high52)}
+                  {formatMoney(low52, nativeCurrency, nativeType)} — {formatMoney(high52, nativeCurrency, nativeType)}
                 </p>
               </div>
               <div className="h-2 bg-surface-container-high rounded-full overflow-hidden border border-outline-variant/10">
@@ -361,7 +390,7 @@ function AddToWatchlistButton({ symbol, onRequireLogin }) {
       {open && (
         <div className="absolute top-full right-0 mt-2 w-56 bg-surface-container-high/95 backdrop-blur-md rounded-xl shadow-2xl border border-outline-variant/20 z-50 py-2">
           <p className="px-4 py-1 text-[10px] uppercase font-bold tracking-[0.15em] text-on-surface-variant">
-            Add {symbol} to…
+            Add {displaySymbol(symbol)} to…
           </p>
           {status === 'loading' ? (
             <div className="flex items-center justify-center py-4">

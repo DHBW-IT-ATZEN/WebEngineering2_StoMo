@@ -94,6 +94,8 @@ public class WatchlistService {
                 .watchlist(list)
                 .symbol(symbol)
                 .startPrice(startPrice)
+                .currency(safeCurrency(symbol))
+                .type(safeType(symbol))
                 .addedAt(Instant.now())
                 .build();
         return toItemDto(itemRepo.save(item), startPrice);
@@ -138,6 +140,22 @@ public class WatchlistService {
         }
     }
 
+    private String safeCurrency(String symbol) {
+        try {
+            return priceHistory.getCurrency(symbol);
+        } catch (RuntimeException ex) {
+            return null;
+        }
+    }
+
+    private String safeType(String symbol) {
+        try {
+            return priceHistory.getType(symbol);
+        } catch (RuntimeException ex) {
+            return null;
+        }
+    }
+
     private WatchlistDto toDto(Watchlist list) {
         List<WatchlistItemDto> items = list.getItems().stream()
                 .map(item -> toItemDto(item, safeLatestPrice(item.getSymbol())))
@@ -163,6 +181,8 @@ public class WatchlistService {
         return WatchlistItemDto.builder()
                 .id(item.getId())
                 .symbol(item.getSymbol())
+                .currency(item.getCurrency())
+                .type(item.getType())
                 .startPrice(start)
                 .currentPrice(currentPrice)
                 .changeAbs(changeAbs)

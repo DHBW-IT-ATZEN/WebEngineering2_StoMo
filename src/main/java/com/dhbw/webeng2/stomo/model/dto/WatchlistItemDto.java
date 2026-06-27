@@ -11,6 +11,8 @@ import java.time.Instant;
 public class WatchlistItemDto {
     private Long id;
     private String symbol;
+    private String currency;
+    private String type;
     private Double startPrice;
     private Double currentPrice;
     private Double changeAbs;

@@ -10,4 +10,6 @@ public class TickerDto {
     private String symbol;
     private Double price;
     private Double changePct;
+    private String currency; // native listing currency from Yahoo (e.g. USD, JPY, EUR)
+    private String type;     // Yahoo instrumentType: EQUITY, INDEX, ETF, CURRENCY, …
 }

@@ -1,8 +1,10 @@
 import { useEffect } from 'react';
 import { BrowserRouter, Navigate, Route, Routes, useOutletContext, useParams } from 'react-router-dom';
 import { ThemeProvider } from './theme/ThemeProvider';
-import { YodaTextProvider } from './theme/YodaTextProvider';
+import { LanguageProvider } from './i18n/LanguageProvider';
+import { TranslationProvider } from './i18n/TranslationProvider';
 import { AuthProvider } from './auth/AuthProvider';
+import { CurrencyProvider } from './currency/CurrencyProvider';
 import Landing from './components/Landing';
 import Layout from './components/Layout';
 import Dashboard from './components/Dashboard';
@@ -24,21 +26,25 @@ function MarketView() {
 function App() {
   return (
     <ThemeProvider>
-      <YodaTextProvider>
-        <AuthProvider>
-          <BrowserRouter>
-            <Routes>
-              <Route path="/" element={<Landing />} />
-              <Route element={<Layout />}>
-                <Route path="/app" element={<MarketEntry />} />
-                <Route path="/app/:symbol" element={<MarketView />} />
-                <Route path="/watchlist" element={<WatchlistPage />} />
-              </Route>
-              <Route path="*" element={<Navigate to="/" replace />} />
-            </Routes>
-          </BrowserRouter>
-        </AuthProvider>
-      </YodaTextProvider>
+      <LanguageProvider>
+        <TranslationProvider>
+          <AuthProvider>
+            <CurrencyProvider>
+              <BrowserRouter>
+                <Routes>
+                  <Route path="/" element={<Landing />} />
+                  <Route element={<Layout />}>
+                    <Route path="/app" element={<MarketEntry />} />
+                    <Route path="/app/:symbol" element={<MarketView />} />
+                    <Route path="/watchlist" element={<WatchlistPage />} />
+                  </Route>
+                  <Route path="*" element={<Navigate to="/" replace />} />
+                </Routes>
+              </BrowserRouter>
+            </CurrencyProvider>
+          </AuthProvider>
+        </TranslationProvider>
+      </LanguageProvider>
     </ThemeProvider>
   );
 }
