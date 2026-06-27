@@ -127,7 +127,7 @@ export default function Landing() {
           <p className="relative z-10 text-on-surface-variant max-w-xl text-base sm:text-lg leading-relaxed">
             <T>Research any stock, follow live price action, and build watchlists that measure performance from the moment you start watching.</T>
           </p>
-          <div className="relative z-10 w-full max-w-md mx-auto">
+          <div className="relative z-20 w-full max-w-md mx-auto">
             <SymbolSearch fullWidth onSelect={(value) => navigate(`/app/${encodeURIComponent(value)}`)} />
           </div>
 

@@ -21,12 +21,13 @@ public class PriceHistory {
     @Column(length = 32)
     private String symbol;
 
-    @Lob
-    @Column(name = "bars_json", columnDefinition = "LONGTEXT", nullable = false)
+    // No @Lob: on PostgreSQL that maps a String to a Large Object (oid), and the driver then
+    // tries to read this text column as a long — "Bad value for type long". Plain text works
+    // across PostgreSQL, H2 and MySQL.
+    @Column(name = "bars_json", columnDefinition = "text", nullable = false)
     private String barsJson; // 30-minute series
 
-    @Lob
-    @Column(name = "fine_bars_json", columnDefinition = "LONGTEXT")
+    @Column(name = "fine_bars_json", columnDefinition = "text")
     private String fineBarsJson; // 10-minute series (nullable so pre-existing rows simply refetch)
 
     @Column(length = 16)
