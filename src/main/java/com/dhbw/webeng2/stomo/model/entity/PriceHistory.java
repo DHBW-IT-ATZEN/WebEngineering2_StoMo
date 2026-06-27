@@ -29,6 +29,12 @@ public class PriceHistory {
     @Column(name = "fine_bars_json", columnDefinition = "LONGTEXT")
     private String fineBarsJson; // 10-minute series (nullable so pre-existing rows simply refetch)
 
+    @Column(length = 16)
+    private String currency; // native listing currency from Yahoo (e.g. USD, JPY, EUR)
+
+    @Column(length = 24)
+    private String type; // Yahoo instrumentType: EQUITY, INDEX, ETF, CURRENCY, …
+
     @Column(nullable = false)
     private Instant fetchedAt;
 

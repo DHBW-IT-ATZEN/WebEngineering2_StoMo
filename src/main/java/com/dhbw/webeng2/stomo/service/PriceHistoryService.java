@@ -59,15 +59,22 @@ public class PriceHistoryService {
         }
 
         try {
-            List<QuoteDto> coarse = yahoo.fetch30m(key);
-            List<QuoteDto> fine = yahoo.fetch10m(key);
+            YahooService.BarSeries coarse = yahoo.fetch30m(key);
+            YahooService.BarSeries fine = yahoo.fetch10m(key);
+            String currency = coarse.currency() != null ? coarse.currency() : fine.currency();
+            String type = coarse.type() != null ? coarse.type() : fine.type();
+            if (type == null) type = "UNKNOWN"; // keep non-null so a typeless symbol isn't re-fetched forever
             PriceHistory entity = cached.orElseGet(PriceHistory::new);
             entity.setSymbol(key);
-            entity.setBarsJson(objectMapper.writeValueAsString(coarse));
-            entity.setFineBarsJson(objectMapper.writeValueAsString(fine));
+            entity.setBarsJson(objectMapper.writeValueAsString(coarse.bars()));
+            entity.setFineBarsJson(objectMapper.writeValueAsString(fine.bars()));
+            entity.setCurrency(currency);
+            entity.setType(type);
             entity.setFetchedAt(Instant.now());
             repo.save(entity);
-            return PriceSeriesDto.builder().symbol(key).coarse(coarse).fine(fine).build();
+            return PriceSeriesDto.builder()
+                    .symbol(key).currency(currency).type(type)
+                    .coarse(coarse.bars()).fine(fine.bars()).build();
         } catch (OptimisticLockingFailureException | DataIntegrityViolationException ex) {
             // Another thread/instance refreshed this symbol concurrently — the DB row is the
             // single source of truth, so serve what the winner just wrote.
@@ -86,6 +93,8 @@ public class PriceHistoryService {
     private PriceSeriesDto build(String symbol, PriceHistory entity) {
         return PriceSeriesDto.builder()
                 .symbol(symbol)
+                .currency(entity.getCurrency())
+                .type(entity.getType())
                 .coarse(deserialize(entity.getBarsJson()))
                 .fine(deserialize(entity.getFineBarsJson()))
                 .build();
@@ -95,6 +104,9 @@ public class PriceHistoryService {
         return cached.isPresent()
                 && cached.get().getBarsJson() != null
                 && cached.get().getFineBarsJson() != null
+                // Force a refresh of legacy rows cached before the currency/type columns existed,
+                // so they pick up the instrument type (an index then renders as points, not money).
+                && cached.get().getType() != null
                 && cached.get().getFetchedAt() != null
                 && cached.get().getFetchedAt().isAfter(Instant.now().minus(ttl));
     }
@@ -110,6 +122,16 @@ public class PriceHistoryService {
         PriceSeriesDto series = getSeries(symbol);
         Double fine = lastClose(series.getFine());
         return fine != null ? fine : lastClose(series.getCoarse());
+    }
+
+    /** Native listing currency for a symbol, from the cached series (nullable). */
+    public String getCurrency(String symbol) {
+        return getSeries(symbol).getCurrency();
+    }
+
+    /** Instrument type (EQUITY, INDEX, …) for a symbol, from the cached series (nullable). */
+    public String getType(String symbol) {
+        return getSeries(symbol).getType();
     }
 
     private Double lastClose(List<QuoteDto> bars) {

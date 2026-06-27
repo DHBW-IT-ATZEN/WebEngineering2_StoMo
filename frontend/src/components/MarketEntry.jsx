@@ -23,8 +23,8 @@ export default function MarketEntry() {
         </p>
       </div>
 
-      <div className="w-full max-w-md flex justify-center">
-        <SymbolSearch onSelect={selectSymbol} />
+      <div className="w-full max-w-md mx-auto">
+        <SymbolSearch fullWidth onSelect={selectSymbol} />
       </div>
 
       <div className="flex flex-wrap items-center justify-center gap-2">

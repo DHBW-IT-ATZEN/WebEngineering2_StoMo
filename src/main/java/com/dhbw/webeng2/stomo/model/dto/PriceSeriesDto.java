@@ -13,6 +13,8 @@ import java.util.List;
 @Builder
 public class PriceSeriesDto {
     private String symbol;
+    private String currency;       // native listing currency from Yahoo (e.g. USD, JPY, EUR)
+    private String type;           // Yahoo instrumentType: EQUITY, INDEX, ETF, CURRENCY, …
     private List<QuoteDto> coarse; // 30-minute bars (~60 days)
     private List<QuoteDto> fine;   // 10-minute bars (recent days)
 }

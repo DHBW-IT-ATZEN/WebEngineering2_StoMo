@@ -30,6 +30,14 @@ public class WatchlistItem {
     /** Price at the moment the symbol was added to the watchlist. */
     private Double startPrice;
 
+    /** Native listing currency of the symbol (e.g. USD, JPY), captured when added. */
+    @Column(length = 16)
+    private String currency;
+
+    /** Yahoo instrument type (EQUITY, INDEX, ETF, …), captured when added. */
+    @Column(length = 24)
+    private String type;
+
     /** When the symbol was added. */
     private Instant addedAt;
 

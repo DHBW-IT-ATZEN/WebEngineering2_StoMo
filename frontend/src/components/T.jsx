@@ -1,18 +1,18 @@
 import { useEffect } from 'react';
-import { useYodaText } from '../theme/useYodaText';
+import { useTranslation } from '../i18n/useTranslation';
 
 /**
- * Renders its (string) children, translated to Yodish while Yoda Mode is active.
- * In dark mode it renders the original text and makes no API calls.
+ * Renders its (string) children translated for the active target — German (static dictionary),
+ * the Yoda theme (yodish), or English (passthrough). Only Yoda needs an async request.
  */
 export default function T({ children }) {
-  const { isYoda, cache, request } = useYodaText();
+  const { target, request, resolve } = useTranslation();
   const text = typeof children === 'string' ? children : '';
 
   useEffect(() => {
-    if (isYoda && text) request(text);
-  }, [isYoda, text, request]);
+    if (text && target === 'yoda') request(text);
+  }, [text, target, request]);
 
-  if (!isYoda || !text) return children;
-  return cache[text] ?? text;
+  if (!text) return children;
+  return resolve(text);
 }

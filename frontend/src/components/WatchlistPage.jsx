@@ -6,8 +6,9 @@ import {
 import {
   addSymbol, createWatchlist, deleteWatchlist, getWatchlists, removeSymbol, renameWatchlist,
 } from '../api/watchlists';
-import { formatPercent, formatPrice } from '../utils/format';
+import { displaySymbol, formatPercent } from '../utils/format';
 import { useAuth } from '../auth/useAuth';
+import { useCurrency } from '../currency/useCurrency';
 import T from './T';
 
 /** The current user's watchlists: pick a list on the left, manage its symbols on the right. */
@@ -102,7 +103,15 @@ export default function WatchlistPage() {
       ) : (
         <div className="grid grid-cols-1 lg:grid-cols-[260px_1fr] gap-8">
           <ListSidebar lists={lists} selectedId={selectedId} onSelect={setSelectedId} onChanged={reload} />
-          {selected && <ListPanel key={selected.id} list={selected} onChanged={reload} onBrowse={() => navigate('/app')} />}
+          {selected && (
+            <ListPanel
+              key={selected.id}
+              list={selected}
+              onChanged={reload}
+              onBrowse={() => navigate('/app')}
+              onOpen={(symbol) => navigate(`/app/${encodeURIComponent(symbol)}`)}
+            />
+          )}
         </div>
       )}
     </main>
@@ -184,7 +193,7 @@ function ListSidebar({ lists, selectedId, onSelect, onChanged }) {
   );
 }
 
-function ListPanel({ list, onChanged, onBrowse }) {
+function ListPanel({ list, onChanged, onBrowse, onOpen }) {
   const [renaming, setRenaming] = useState(false);
   const [name, setName] = useState(list.name);
   const [confirmDelete, setConfirmDelete] = useState(false);
@@ -337,6 +346,7 @@ function ListPanel({ list, onChanged, onBrowse }) {
               item={item}
               removing={busy === `remove-${item.id}`}
               onRemove={() => doRemove(item.id)}
+              onOpen={() => onOpen(item.symbol)}
             />
           ))}
         </div>
@@ -345,22 +355,37 @@ function ListPanel({ list, onChanged, onBrowse }) {
   );
 }
 
-function WatchlistRow({ item, removing, onRemove }) {
+function WatchlistRow({ item, removing, onRemove, onOpen }) {
+  const { formatMoney } = useCurrency();
   const pct = item.changePct;
   const trendColor = pct == null ? 'text-on-surface-variant' : pct >= 0 ? 'text-primary' : 'text-error';
 
+  function handleKeyDown(event) {
+    if (event.key === 'Enter' || event.key === ' ') {
+      event.preventDefault();
+      onOpen();
+    }
+  }
+
   return (
-    <div className="flex flex-col gap-4 sm:grid sm:grid-cols-[1.5fr_1fr_1fr_1fr_auto] sm:gap-4 sm:items-center bg-surface-container-low rounded-xl px-6 py-5 border border-outline-variant/10 hover:border-primary/30 transition-colors">
+    <div
+      role="button"
+      tabIndex={0}
+      onClick={onOpen}
+      onKeyDown={handleKeyDown}
+      title={`View ${item.symbol}`}
+      className="group flex flex-col gap-4 sm:grid sm:grid-cols-[1.5fr_1fr_1fr_1fr_auto] sm:gap-4 sm:items-center bg-surface-container-low rounded-xl px-6 py-5 border border-outline-variant/10 cursor-pointer hover:border-primary/30 focus:outline-none focus-visible:ring-2 focus-visible:ring-primary/50 transition-colors"
+    >
       <div className="flex items-center justify-between">
         <div className="flex flex-col">
-          <span className="font-headline font-bold text-lg">{item.symbol}</span>
+          <span className="font-headline font-bold text-lg group-hover:text-primary transition-colors">{displaySymbol(item.symbol)}</span>
           <span className="text-[11px] text-on-surface-variant"><T>Added</T> {formatDate(item.addedAt)}</span>
         </div>
         <RemoveButton className="sm:hidden" removing={removing} onRemove={onRemove} />
       </div>
 
-      <Cell label="Starting" value={formatPrice(item.startPrice)} />
-      <Cell label="Current" value={formatPrice(item.currentPrice)} />
+      <Cell label="Starting" value={formatMoney(item.startPrice, item.currency, item.type)} />
+      <Cell label="Current" value={formatMoney(item.currentPrice, item.currency, item.type)} />
 
       <div className="flex justify-between sm:flex-col sm:items-end">
         <span className="sm:hidden text-[10px] uppercase font-bold tracking-wider text-on-surface-variant"><T>Performance</T></span>
@@ -387,7 +412,7 @@ function RemoveButton({ removing, onRemove, className = '' }) {
   return (
     <button
       type="button"
-      onClick={onRemove}
+      onClick={(event) => { event.stopPropagation(); onRemove(); }}
       disabled={removing}
       title="Remove from list"
       className={`p-2 rounded-lg text-on-surface-variant hover:text-error hover:bg-error/10 transition-colors disabled:opacity-50 ${className}`}

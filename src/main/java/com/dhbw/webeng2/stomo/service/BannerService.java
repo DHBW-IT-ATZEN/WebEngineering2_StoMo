@@ -10,28 +10,26 @@ import org.springframework.stereotype.Service;
 import java.time.Duration;
 import java.time.Instant;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
 
 /**
- * Builds the homepage ticker banner. By default it shows a curated global set (the five major
- * indices plus large caps). Once users have collectively watched more than
- * {@code app.banner.dynamic-threshold} distinct symbols, it switches to the 20 most-watched
- * symbols across all watchlists — a live reflection of what users are tracking. Prices and day
- * changes come from Yahoo; the assembled banner is cached in memory for a few minutes so the
- * landing page never triggers a burst of upstream calls.
+ * Builds the homepage ticker banner. By default it shows a curated global set configured via
+ * {@code app.banner.default-symbols} (the five major indices plus large caps). Once users have
+ * collectively watched more than {@code app.banner.dynamic-threshold} distinct symbols, it
+ * switches to the 20 most-watched symbols across all watchlists — a live reflection of what users
+ * are tracking. Prices and day changes come from Yahoo; the assembled banner is cached in memory
+ * for a few minutes so the landing page never triggers a burst of upstream calls.
  */
 @Service
 @Slf4j
 public class BannerService {
 
-    private static final List<String> DEFAULT_SYMBOLS = List.of(
-            "^GSPC", "^IXIC", "^DJI", "^GDAXI", "^N225",   // S&P 500, Nasdaq, Dow, DAX, Nikkei
-            "AAPL", "MSFT", "NVDA", "AMZN", "GOOGL", "META", "TSLA", "SAP", "7203.T");
-
     private final WatchlistItemRepo watchlistItemRepo;
     private final YahooService yahoo;
     private final long dynamicThreshold;
     private final Duration ttl;
+    private final List<String> defaultSymbols;
 
     private volatile List<TickerDto> cached;
     private volatile Instant cachedAt;
@@ -39,11 +37,21 @@ public class BannerService {
     public BannerService(WatchlistItemRepo watchlistItemRepo,
                          YahooService yahoo,
                          @Value("${app.banner.dynamic-threshold:20}") long dynamicThreshold,
-                         @Value("${app.banner.ttl-minutes:5}") long ttlMinutes) {
+                         @Value("${app.banner.ttl-minutes:5}") long ttlMinutes,
+                         @Value("${app.banner.default-symbols:}") String defaultSymbolsCsv) {
         this.watchlistItemRepo = watchlistItemRepo;
         this.yahoo = yahoo;
         this.dynamicThreshold = dynamicThreshold;
         this.ttl = Duration.ofMinutes(ttlMinutes);
+        // Split the comma-separated property ourselves rather than relying on Spring's implicit
+        // String->List conversion, which isn't guaranteed across contexts.
+        this.defaultSymbols = Arrays.stream(defaultSymbolsCsv.split(","))
+                .map(String::trim)
+                .filter(s -> !s.isEmpty())
+                .toList();
+        if (this.defaultSymbols.isEmpty()) {
+            log.warn("app.banner.default-symbols is empty — the banner stays blank until enough symbols are watched");
+        }
     }
 
     public List<TickerDto> getBanner() {
@@ -80,6 +88,6 @@ public class BannerService {
                 return topWatched;
             }
         }
-        return DEFAULT_SYMBOLS;
+        return defaultSymbols;
     }
 }

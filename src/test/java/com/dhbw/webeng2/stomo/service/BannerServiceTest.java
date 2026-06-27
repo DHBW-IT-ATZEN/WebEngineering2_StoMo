@@ -7,6 +7,7 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.boot.test.context.runner.ApplicationContextRunner;
 
 import java.util.List;
 
@@ -33,7 +34,7 @@ class BannerServiceTest {
 
     @BeforeEach
     void setUp() {
-        service = new BannerService(watchlistItemRepo, yahoo, 20, 5);
+        service = new BannerService(watchlistItemRepo, yahoo, 20, 5, "^GSPC,^DJI,AAPL,MSFT");
         lenient().when(yahoo.fetchDailyQuote(anyString())).thenAnswer(inv ->
                 TickerDto.builder().symbol(inv.getArgument(0)).price(1.0).changePct(0.0).build());
     }
@@ -66,5 +67,27 @@ class BannerServiceTest {
         service.getBanner();
 
         verify(watchlistItemRepo, times(1)).countDistinctSymbols(); // second call served from cache
+    }
+
+    /**
+     * Boots a minimal Spring context to prove the comma-separated app.banner.default-symbols
+     * property binds to a List<String> (split into distinct symbols, order preserved) rather
+     * than a single combined string — the behaviour the curated set now relies on.
+     */
+    @Test
+    void bindsCommaSeparatedDefaultSymbolsFromConfig() {
+        when(watchlistItemRepo.countDistinctSymbols()).thenReturn(0L); // below threshold -> curated defaults
+
+        new ApplicationContextRunner()
+                .withBean(WatchlistItemRepo.class, () -> watchlistItemRepo)
+                .withBean(YahooService.class, () -> yahoo)
+                .withBean(BannerService.class)
+                .withPropertyValues(
+                        "app.banner.default-symbols=^GSPC,^DJI,AAPL",
+                        "app.banner.dynamic-threshold=20",
+                        "app.banner.ttl-minutes=5")
+                .run(context -> assertThat(context.getBean(BannerService.class).getBanner())
+                        .extracting(TickerDto::getSymbol)
+                        .containsExactly("^GSPC", "^DJI", "AAPL"));
     }
 }

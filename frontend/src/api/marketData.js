@@ -50,3 +50,6 @@ export const searchSymbols = (query) => avRequest(`/search?q=${enc(query)}`);
 
 /** Homepage ticker banner: top-watched (or curated default) symbols with live quotes -> TickerDto[] */
 export const getMovers = () => request('/movers');
+
+/** Start-of-day FX rates -> { base, asOfDate, rates: {USD:1.0,...}, displayOptions: [...] } */
+export const getFxRates = () => request('/fx');

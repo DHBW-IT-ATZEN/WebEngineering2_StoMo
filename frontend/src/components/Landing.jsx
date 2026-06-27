@@ -1,12 +1,18 @@
 import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { ArrowRight, Bookmark, Building2, CandlestickChart, LineChart, LogIn } from 'lucide-react';
+import { Bookmark, Building2, CandlestickChart, LineChart, LogIn, LogOut } from 'lucide-react';
 import { useAuth } from '../auth/useAuth';
 import { getMovers } from '../api/marketData';
-import { formatPercent, formatPrice } from '../utils/format';
+import { displaySymbol, formatPercent } from '../utils/format';
+import { useCurrency } from '../currency/useCurrency';
 import ThemeToggle from './ThemeToggle';
+import LanguageSelect from './LanguageSelect';
 import AuthModal from './AuthModal';
+import SymbolSearch from './SymbolSearch';
 import T from './T';
+
+// Trending symbols offered as one-click shortcuts beside the search (same set as MarketEntry).
+const QUICK_PICKS = ['AAPL', 'MSFT', 'NVDA', 'TSLA', 'AMZN', 'GOOGL', 'META'];
 
 // Shown until /api/market/movers responds (and if it's unreachable) so the strip is never empty.
 const FALLBACK_TICKERS = [
@@ -26,7 +32,8 @@ const FEATURES = [
 
 /** Public landing page: the entry point into the app and the login flow. */
 export default function Landing() {
-  const { user } = useAuth();
+  const { user, logout } = useAuth();
+  const { formatMoney } = useCurrency();
   const navigate = useNavigate();
   const [authOpen, setAuthOpen] = useState(false);
   const [tickers, setTickers] = useState(FALLBACK_TICKERS);
@@ -45,7 +52,7 @@ export default function Landing() {
     <div className="min-h-screen bg-background text-on-surface font-body flex flex-col">
       <style>{`
         @keyframes stomo-marquee { from { transform: translateX(0); } to { transform: translateX(-50%); } }
-        .stomo-marquee { animation: stomo-marquee 45s linear infinite; }
+        .stomo-marquee { animation: stomo-marquee 75s linear infinite; }
         .stomo-marquee:hover { animation-play-state: paused; }
       `}</style>
 
@@ -56,24 +63,31 @@ export default function Landing() {
             <span className="font-headline text-xl font-bold tracking-tight"><T>Stock Monitor</T></span>
           </div>
           <div className="flex items-center gap-3">
+            <LanguageSelect />
             <ThemeToggle />
             {user ? (
-              <button
-                type="button"
-                onClick={() => navigate('/app')}
-                className="flex items-center gap-2 px-4 py-2 rounded-lg bg-primary text-on-primary font-bold text-xs uppercase tracking-wider hover:brightness-110 active:scale-95 transition-all"
-              >
-                <T>Open app</T>
-                <ArrowRight className="w-4 h-4" />
-              </button>
+              <div className="flex items-center gap-2 sm:gap-3">
+                <span className="hidden sm:inline text-sm font-medium text-on-surface-variant">
+                  {user.firstname}
+                </span>
+                <button
+                  type="button"
+                  onClick={logout}
+                  title="Log out"
+                  className="flex items-center gap-1.5 px-3 py-2 rounded-lg text-on-surface-variant hover:text-primary border border-outline-variant/30 transition-colors"
+                >
+                  <LogOut className="w-4 h-4" />
+                  <span className="hidden sm:inline text-xs font-bold uppercase tracking-wider"><T>Logout</T></span>
+                </button>
+              </div>
             ) : (
               <button
                 type="button"
                 onClick={() => setAuthOpen(true)}
-                className="flex items-center gap-2 px-4 py-2 rounded-lg bg-primary text-on-primary font-bold text-xs uppercase tracking-wider hover:brightness-110 active:scale-95 transition-all"
+                className="flex items-center gap-1.5 px-3 sm:px-4 py-2 rounded-lg bg-primary text-on-primary font-bold text-xs uppercase tracking-wider hover:brightness-110 active:scale-95 transition-all"
               >
                 <LogIn className="w-4 h-4" />
-                <T>Log in</T>
+                <span className="hidden sm:inline"><T>Log in</T></span>
               </button>
             )}
           </div>
@@ -84,13 +98,19 @@ export default function Landing() {
       <div className="border-b border-outline-variant/20 bg-surface/40 overflow-hidden">
         <div className="flex w-max gap-8 px-6 py-3 stomo-marquee">
           {[...tickers, ...tickers].map((t, i) => (
-            <span key={`${t.symbol}-${i}`} className="flex items-center gap-2 text-sm">
-              <span className="font-headline font-bold">{t.symbol}</span>
-              <span className="text-on-surface-variant">{formatPrice(t.price)}</span>
+            <button
+              type="button"
+              key={`${t.symbol}-${i}`}
+              onClick={() => navigate(`/app/${encodeURIComponent(t.symbol)}`)}
+              title={`View ${displaySymbol(t.symbol)}`}
+              className="group flex items-center gap-2 text-sm whitespace-nowrap"
+            >
+              <span className="font-headline font-bold group-hover:text-primary transition-colors">{displaySymbol(t.symbol)}</span>
+              <span className="text-on-surface-variant">{formatMoney(t.price, t.currency, t.type)}</span>
               <span className={(t.changePct ?? 0) >= 0 ? 'text-primary' : 'text-error'}>
                 {formatPercent(t.changePct)}
               </span>
-            </span>
+            </button>
           ))}
         </div>
       </div>
@@ -107,34 +127,24 @@ export default function Landing() {
           <p className="relative z-10 text-on-surface-variant max-w-xl text-base sm:text-lg leading-relaxed">
             <T>Research any stock, follow live price action, and build watchlists that measure performance from the moment you start watching.</T>
           </p>
-          <div className="relative z-10 flex flex-wrap items-center justify-center gap-4">
-            <button
-              type="button"
-              onClick={() => navigate('/app')}
-              className="flex items-center gap-2 px-6 py-3.5 rounded-xl bg-primary text-on-primary font-bold text-sm uppercase tracking-wider hover:brightness-110 active:scale-95 transition-all"
-            >
-              <T>Explore the markets</T>
-              <ArrowRight className="w-4 h-4" />
-            </button>
-            {user ? (
+          <div className="relative z-10 w-full max-w-md mx-auto">
+            <SymbolSearch fullWidth onSelect={(value) => navigate(`/app/${encodeURIComponent(value)}`)} />
+          </div>
+
+          <div className="relative z-10 flex flex-wrap items-center justify-center gap-2">
+            <span className="text-[10px] uppercase font-bold tracking-[0.15em] text-on-surface-variant mr-1">
+              <T>Popular</T>
+            </span>
+            {QUICK_PICKS.map((symbol) => (
               <button
+                key={symbol}
                 type="button"
-                onClick={() => navigate('/watchlist')}
-                className="flex items-center gap-2 px-6 py-3.5 rounded-xl bg-surface-container-high text-on-surface font-bold text-sm uppercase tracking-wider border border-outline-variant/30 hover:text-primary transition-colors"
+                onClick={() => navigate(`/app/${encodeURIComponent(symbol)}`)}
+                className="px-3 py-1.5 bg-surface-container-low rounded-full text-xs font-bold border border-outline-variant/20 hover:border-primary/40 hover:text-primary transition-colors"
               >
-                <Bookmark className="w-4 h-4" />
-                <T>My watchlists</T>
+                {symbol}
               </button>
-            ) : (
-              <button
-                type="button"
-                onClick={() => setAuthOpen(true)}
-                className="flex items-center gap-2 px-6 py-3.5 rounded-xl bg-surface-container-high text-on-surface font-bold text-sm uppercase tracking-wider border border-outline-variant/30 hover:text-primary transition-colors"
-              >
-                <LogIn className="w-4 h-4" />
-                <T>Log in</T>
-              </button>
-            )}
+            ))}
           </div>
         </section>
 

@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from 'react';
 import { AlertTriangle, Loader2, Search } from 'lucide-react';
 import { searchSymbols } from '../api/marketData';
 import { LIVE_APIS } from '../config';
+import { useTranslate } from '../i18n/useTranslation';
 
 function friendlyError(err) {
   const msg = err?.message ?? '';
@@ -11,7 +12,8 @@ function friendlyError(err) {
   return msg || 'Search failed';
 }
 
-export default function SymbolSearch({ onSelect }) {
+export default function SymbolSearch({ onSelect, fullWidth = false }) {
+  const t = useTranslate();
   const [query, setQuery] = useState('');
   const [results, setResults] = useState([]);
   const [open, setOpen] = useState(false);
@@ -77,10 +79,12 @@ export default function SymbolSearch({ onSelect }) {
   const showDropdown = open && (results.length > 0 || error || (searched && !loading));
 
   return (
-    <div ref={boxRef} className="relative">
+    <div ref={boxRef} className={`relative ${fullWidth ? 'w-full' : ''}`}>
       <form
         onSubmit={handleSubmit}
-        className="flex items-center gap-2 bg-surface-container-lowest rounded-lg px-3 py-2 border border-outline/40 focus-within:border-primary transition-colors"
+        className={`flex items-center gap-2 bg-surface-container-lowest border border-outline/40 focus-within:border-primary transition-colors ${
+          fullWidth ? 'rounded-2xl px-5 py-3.5' : 'rounded-lg px-3 py-2'
+        }`}
       >
         {loading ? (
           <Loader2 className="w-4 h-4 text-on-surface-variant animate-spin" />
@@ -91,13 +95,17 @@ export default function SymbolSearch({ onSelect }) {
           value={query}
           onChange={(event) => setQuery(event.target.value)}
           onFocus={() => (results.length > 0 || error) && setOpen(true)}
-          placeholder={LIVE_APIS ? 'Search ticker…' : 'Ticker + Enter…'}
-          className="bg-transparent outline-none text-sm text-on-surface placeholder:text-on-surface-variant w-28 sm:w-40"
+          placeholder={t(LIVE_APIS ? 'Search ticker…' : 'Ticker + Enter…')}
+          className={`bg-transparent outline-none text-on-surface placeholder:text-on-surface-variant ${
+            fullWidth ? 'flex-1 w-full text-base' : 'text-sm w-28 sm:w-40'
+          }`}
         />
       </form>
 
       {showDropdown && (
-        <div className="absolute right-0 mt-2 w-72 max-h-80 overflow-auto bg-surface-container-high/95 backdrop-blur-md rounded-xl shadow-2xl border border-outline-variant/20 z-50 py-2">
+        <div className={`absolute mt-2 max-h-80 overflow-auto bg-surface-container-high/95 backdrop-blur-md rounded-2xl shadow-2xl border border-outline-variant/20 z-50 py-2 ${
+          fullWidth ? 'left-0 right-0' : 'right-0 w-72'
+        }`}>
           {error ? (
             <div className="flex items-start gap-2 px-4 py-3 text-error">
               <AlertTriangle className="w-4 h-4 mt-0.5 shrink-0" />

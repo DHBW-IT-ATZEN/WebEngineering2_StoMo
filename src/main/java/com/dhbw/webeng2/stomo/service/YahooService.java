@@ -37,14 +37,18 @@ public class YahooService {
         this.webClient = WebClient.builder().baseUrl(baseUrl).build();
     }
 
+    /** Bars plus the symbol's native currency and instrument type (from Yahoo's meta block). */
+    public record BarSeries(List<QuoteDto> bars, String currency, String type) {}
+
     /** 30-minute bars over ~60 days — backs the weekly & monthly views. */
-    public List<QuoteDto> fetch30m(String symbol) {
+    public BarSeries fetch30m(String symbol) {
         return fetchBars(symbol, "30m", "60d");
     }
 
     /** 10-minute bars (aggregated from Yahoo's 5m) over a few days — backs the intraday view. */
-    public List<QuoteDto> fetch10m(String symbol) {
-        return aggregateTo10m(fetchBars(symbol, "5m", "5d"));
+    public BarSeries fetch10m(String symbol) {
+        BarSeries fiveMin = fetchBars(symbol, "5m", "5d");
+        return new BarSeries(aggregateTo10m(fiveMin.bars()), fiveMin.currency(), fiveMin.type());
     }
 
     /**
@@ -79,11 +83,17 @@ public class YahooService {
             return null;
         }
         double changePct = (price - prevClose) / prevClose * 100.0;
-        return TickerDto.builder().symbol(symbol).price(price).changePct(changePct).build();
+        return TickerDto.builder()
+                .symbol(symbol)
+                .price(price)
+                .changePct(changePct)
+                .currency(asString(meta.get("currency")))
+                .type(asString(meta.get("instrumentType")))
+                .build();
     }
 
     @SuppressWarnings("unchecked")
-    private List<QuoteDto> fetchBars(String symbol, String interval, String range) {
+    private BarSeries fetchBars(String symbol, String interval, String range) {
         log.info("Fetching Yahoo {} bars ({}) for {}", interval, range, symbol);
 
         Map<String, Object> root = webClient.get()
@@ -112,6 +122,8 @@ public class YahooService {
         Map<String, Object> result0 = (Map<String, Object>) results.get(0);
         Map<String, Object> meta = (Map<String, Object>) result0.get("meta");
         long gmtOffset = meta == null ? 0L : toLong(meta.get("gmtoffset"));
+        String currency = meta == null ? null : asString(meta.get("currency"));
+        String type = meta == null ? null : asString(meta.get("instrumentType"));
 
         List<Object> timestamps = (List<Object>) result0.get("timestamp");
         Map<String, Object> indicators = (Map<String, Object>) result0.get("indicators");
@@ -144,7 +156,7 @@ public class YahooService {
         if (bars.isEmpty()) {
             throw new ResourceNotFoundException("No intraday history for symbol: " + symbol);
         }
-        return bars;
+        return new BarSeries(bars, currency, type);
     }
 
     /** Combine 5-minute bars into 10-minute candles (Yahoo has no native 10m interval). */
@@ -188,6 +200,10 @@ public class YahooService {
 
     private static Object at(List<Object> list, int i) {
         return (list != null && i < list.size()) ? list.get(i) : null;
+    }
+
+    private static String asString(Object value) {
+        return value == null ? null : value.toString();
     }
 
     private static Double toDouble(Object value) {

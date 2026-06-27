@@ -35,7 +35,14 @@ export function useMarketData(symbol) {
           : Promise.resolve(null),
       ]);
       setQuote(quoteRes);
-      setSeries(seriesRes ? { coarse: seriesRes.coarse ?? [], fine: seriesRes.fine ?? [] } : null);
+      setSeries(seriesRes
+        ? {
+            coarse: seriesRes.coarse ?? [],
+            fine: seriesRes.fine ?? [],
+            currency: seriesRes.currency,
+            type: seriesRes.type,
+          }
+        : null);
       setOverview(overviewRes);
     } catch (err) {
       setError(err.message || 'Failed to load market data');
