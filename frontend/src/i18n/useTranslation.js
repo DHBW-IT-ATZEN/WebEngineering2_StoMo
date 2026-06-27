@@ -11,16 +11,16 @@ export function useTranslation() {
 
 /**
  * Returns a `t(text)` function for translating attribute strings that can't be wrapped in <T>
- * (placeholders, title, aria-label). Resolves German statically and Yoda from the async cache
- * (enqueuing a fetch on first use); English passes through.
+ * (placeholders, title, aria-label). German resolves from the static dictionary with a dynamic
+ * fallback, Yoda from the async cache; request() enqueues a fetch when needed and no-ops otherwise.
  */
 export function useTranslate() {
-  const { target, request, resolve } = useTranslation();
+  const { request, resolve } = useTranslation();
   return useCallback(
     (text) => {
-      if (text && target === 'yoda') request(text);
+      if (text) request(text);
       return resolve(text);
     },
-    [target, request, resolve],
+    [request, resolve],
   );
 }
