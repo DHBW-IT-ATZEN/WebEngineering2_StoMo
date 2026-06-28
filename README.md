@@ -205,6 +205,8 @@ docker compose -f docker-compose.yml -f docker-compose.https.yml up -d --build
 `.dev` is HSTS-preloaded, so browsers force HTTPS — the mkcert certificate is what lets it load
 without warnings.
 
+### Note that the local libretranslate instance has no volume and re-downloads the translation model on rebuild. If something does not translate directly after building, this is probably why!
+
 ### Environment variables
 
 Configure these in a `.env` file (copy [`.env.example`](.env.example) — it lists every
