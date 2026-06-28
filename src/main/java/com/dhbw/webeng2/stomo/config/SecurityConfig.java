@@ -65,6 +65,9 @@ public class SecurityConfig {
                         .requestMatchers("/api/market/**", "/api/yoda/**", "/api/translate/**").permitAll()
                         .requestMatchers("/v3/api-docs/**", "/swagger-ui/**", "/swagger-ui.html").permitAll()
                         .requestMatchers("/actuator/health", "/actuator/health/**").permitAll()
+                        // Spring forwards unhandled exceptions to /error; if it required auth, every
+                        // such failure would surface as a misleading 401 instead of its real status.
+                        .requestMatchers("/error").permitAll()
                         .requestMatchers("/api/auth/me", "/api/watchlists/**").authenticated()
                         .anyRequest().authenticated())
                 .oauth2ResourceServer(oauth2 -> oauth2.jwt(Customizer.withDefaults()));

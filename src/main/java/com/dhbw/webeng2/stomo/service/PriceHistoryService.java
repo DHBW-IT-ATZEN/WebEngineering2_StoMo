@@ -55,7 +55,13 @@ public class PriceHistoryService {
 
         Optional<PriceHistory> cached = repo.findById(key);
         if (isFresh(cached)) {
-            return build(key, cached.get());
+            try {
+                return build(key, cached.get());
+            } catch (RuntimeException ex) {
+                // The cached payload can't be parsed (e.g. legacy Large-Object rows that hold an
+                // OID instead of JSON): treat it as a cache miss and refetch rather than failing.
+                log.warn("Corrupt cached series for {} ({}); refetching.", key, ex.getMessage());
+            }
         }
 
         try {
@@ -82,9 +88,16 @@ public class PriceHistoryService {
                     .map(e -> build(key, e))
                     .orElseThrow(() -> ex);
         } catch (RuntimeException ex) {
+            // Upstream failed — serve stale cache only if it is actually readable; a corrupt
+            // stale row must not mask the real upstream error.
             if (cached.isPresent() && cached.get().getBarsJson() != null) {
-                log.warn("Yahoo refresh failed for {} ({}); serving stale cache.", key, ex.getMessage());
-                return build(key, cached.get());
+                try {
+                    PriceSeriesDto stale = build(key, cached.get());
+                    log.warn("Yahoo refresh failed for {} ({}); serving stale cache.", key, ex.getMessage());
+                    return stale;
+                } catch (RuntimeException ignored) {
+                    // Stale cache is also corrupt — fall through and surface the upstream error.
+                }
             }
             throw ex;
         }

@@ -67,6 +67,24 @@ class PriceHistoryServiceTest {
     }
 
     @Test
+    void refetchesCorruptCachedRowInsteadOfFailing() {
+        PriceHistory corrupt = row("EQUITY");
+        corrupt.setBarsJson("32836");     // legacy Large-Object OID stored as text, not JSON
+        corrupt.setFineBarsJson("32837");
+        when(repo.findById("^DJI")).thenReturn(Optional.of(corrupt));
+        when(objectMapper.readValue("32836", QuoteDto[].class))
+                .thenThrow(new RuntimeException("Cannot deserialize QuoteDto[] from Integer value"));
+        when(yahoo.fetch30m("^DJI")).thenReturn(new YahooService.BarSeries(List.of(quote(51849)), "USD", "INDEX"));
+        when(yahoo.fetch10m("^DJI")).thenReturn(new YahooService.BarSeries(List.of(quote(51849)), "USD", "INDEX"));
+        when(objectMapper.writeValueAsString(any())).thenReturn("[]");
+
+        PriceSeriesDto out = service().getSeries("^DJI");
+
+        assertThat(out.getCoarse()).hasSize(1);   // served fresh data, not the corrupt row
+        verify(yahoo).fetch30m("^DJI");            // i.e. it refetched rather than throwing
+    }
+
+    @Test
     void servesFreshRowThatAlreadyHasType() {
         when(repo.findById("^DJI")).thenReturn(Optional.of(row("INDEX")));
         when(objectMapper.readValue("[]", QuoteDto[].class)).thenReturn(new QuoteDto[0]);

@@ -1,5 +1,6 @@
 package com.dhbw.webeng2.stomo.service;
 
+import com.dhbw.webeng2.stomo.exception.BusinessException;
 import com.dhbw.webeng2.stomo.exception.ResourceNotFoundException;
 import com.dhbw.webeng2.stomo.model.dto.QuoteDto;
 import com.dhbw.webeng2.stomo.model.dto.TickerDto;
@@ -8,6 +9,7 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.core.ParameterizedTypeReference;
 import org.springframework.stereotype.Service;
 import org.springframework.web.reactive.function.client.WebClient;
+import org.springframework.web.reactive.function.client.WebClientResponseException;
 
 import java.time.Instant;
 import java.time.ZoneOffset;
@@ -57,16 +59,14 @@ public class YahooService {
      */
     @SuppressWarnings("unchecked")
     public TickerDto fetchDailyQuote(String symbol) {
-        Map<String, Object> root = webClient.get()
-                .uri(uriBuilder -> uriBuilder
-                        .path("/v8/finance/chart/{symbol}")
-                        .queryParam("interval", "1d")
-                        .queryParam("range", "1d")
-                        .build(symbol))
-                .header("User-Agent", "Mozilla/5.0")
-                .retrieve()
-                .bodyToMono(JSON_MAP)
-                .block();
+        Map<String, Object> root;
+        try {
+            root = fetchChart(symbol, "1d", "1d");
+        } catch (RuntimeException ex) {
+            // Banner quote is best-effort: a bad/unknown symbol just gets skipped, never breaks the banner.
+            log.debug("No banner quote for {}: {}", symbol, ex.getMessage());
+            return null;
+        }
 
         Map<String, Object> chart = root == null ? null : (Map<String, Object>) root.get("chart");
         List<Object> results = chart == null ? null : (List<Object>) chart.get("result");
@@ -92,20 +92,37 @@ public class YahooService {
                 .build();
     }
 
+    /**
+     * GET Yahoo's chart JSON, translating upstream HTTP errors into clean app exceptions:
+     * a 404 (unknown symbol) becomes a {@link ResourceNotFoundException} (-> 404), any other
+     * upstream status a {@link BusinessException} (-> 502). Without this, the raw
+     * {@code WebClientResponseException} escapes unhandled and surfaces as a misleading 401.
+     */
+    private Map<String, Object> fetchChart(String symbol, String interval, String range) {
+        try {
+            return webClient.get()
+                    .uri(uriBuilder -> uriBuilder
+                            .path("/v8/finance/chart/{symbol}")
+                            .queryParam("interval", interval)
+                            .queryParam("range", range)
+                            .build(symbol))
+                    .header("User-Agent", "Mozilla/5.0")
+                    .retrieve()
+                    .bodyToMono(JSON_MAP)
+                    .block();
+        } catch (WebClientResponseException.NotFound ex) {
+            throw new ResourceNotFoundException("No data for symbol: " + symbol);
+        } catch (WebClientResponseException ex) {
+            throw new BusinessException(
+                    "Market-data provider error for " + symbol + " (HTTP " + ex.getStatusCode().value() + ")");
+        }
+    }
+
     @SuppressWarnings("unchecked")
     private BarSeries fetchBars(String symbol, String interval, String range) {
         log.info("Fetching Yahoo {} bars ({}) for {}", interval, range, symbol);
 
-        Map<String, Object> root = webClient.get()
-                .uri(uriBuilder -> uriBuilder
-                        .path("/v8/finance/chart/{symbol}")
-                        .queryParam("interval", interval)
-                        .queryParam("range", range)
-                        .build(symbol))
-                .header("User-Agent", "Mozilla/5.0")
-                .retrieve()
-                .bodyToMono(JSON_MAP)
-                .block();
+        Map<String, Object> root = fetchChart(symbol, interval, range);
 
         Map<String, Object> chart = root == null ? null : (Map<String, Object>) root.get("chart");
         if (chart == null) {
