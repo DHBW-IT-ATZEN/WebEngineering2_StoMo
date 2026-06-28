@@ -25,7 +25,7 @@ Main Inspiration has been taken from tradingview.com
 ## Architecture
 
 ```
-┌──────────┐      REST/JSON     ┌─────────────┐      HTTPS      ┌──────────────────────┐
+┌──────────┐      REST/JSON     ┌─────────────┐      HTTPS     ┌──────────────────────┐
 │ FRONTEND │ ◄────────────────► │   BACKEND   │ ◄────────────► │  THIRD-PARTY APIs    │
 │ (React,  │     /api/**        │ (Spring     │                │  Finnhub · Yahoo ·   │
 │  Vite)   │                    │  Boot, JPA) │                │  Alpha Vantage · …   │
@@ -44,7 +44,7 @@ Main Inspiration has been taken from tradingview.com
 - **Third-party** — the backend aggregates data from Finnhub, Yahoo Finance and Alpha Vantage
   (details below), plus an optional Yodish translation API.
 
-**Note**: To save on API-calls, 
+**Note**: To save on API-calls, Postgres saves market-data by symbol. The latest dataset is also cached until a new stock is viewed by the user.
 
 ---
 
@@ -70,7 +70,7 @@ Main Inspiration has been taken from tradingview.com
 - **Authentication** — register / login with hashed passwords (BCrypt) and stateless JWT.
 - **Watchlists** — each user can keep **several named watchlists** (full CRUD); add/remove
   symbols, with performance measured from the price captured when the symbol was added.
-- **Theming** — dark ↔ "Yoda" theme toggle, plus an optional Yodish UI-text translation mode.
+- **Theming** — dark ↔ "Yoda" theme toggle, plus an optional Yodish UI-text translation mode (which is currently inactive, earthy color palette in homage to Yoda though).
 
 ---
 
@@ -105,7 +105,7 @@ central `@RestControllerAdvice`.
 |---|---|---|---|
 | POST | `/register` | `{firstname,lastname,email,password}` | `201` + JWT; validated (`@Email`, password ≥ 8) |
 | POST | `/login` | `{email,password}` | `200` + JWT; `401` on bad credentials |
-| GET | `/me` | — | 🔒 current user |
+| GET | `/me` | — |  current user |
 
 ### Market data — `/api/market` (public)
 | Method | Path | Notes |
@@ -115,7 +115,7 @@ central `@RestControllerAdvice`.
 | GET | `/overview/{symbol}` | Company overview (Alpha Vantage) |
 | GET | `/search?q={query}` | Symbol search (Alpha Vantage) |
 
-### Watchlists — `/api/watchlists` (🔒 JWT required)
+### Watchlists — `/api/watchlists` (JWT required)
 | Method | Path | Notes |
 |---|---|---|
 | GET | `/` | List the user's watchlists (auto-creates a default if none) |
@@ -175,9 +175,9 @@ docker compose up -d db
 cd frontend && npm install && npm run dev   # proxies /api → :8080
 ```
 
-### Option C — serve at https://stomo.dev (local HTTPS, optional / experimental)
+### Option C — serve at https://stomo.dev (local HTTPS, optional / experimental) <br>-> Has been discontinued as it caused more headaches than brought benefits
 
-> ⚠️ **Not the standard way to run StoMo — use Option A (`http://localhost`).** This path only
+> **Not the standard way to run StoMo — use Option A (`http://localhost`).** This path only
 > works on a machine that has generated its own mkcert certificate **and** added a `stomo.dev`
 > hosts entry (both are per-developer and not committed), so it can't be shared as-is. If you
 > open `https://stomo.dev` without first starting the HTTPS override below, the browser shows
@@ -210,14 +210,14 @@ without warnings.
 Configure these in a `.env` file (copy [`.env.example`](.env.example) — it lists every
 variable). Docker Compose loads `.env` automatically. Full walkthrough: [docs/setup.md](docs/setup.md).
 
-| Variable | Used for | Required? |
-|---|---|---|
-| `POSTGRES_PASSWORD` | database password | **Yes** — app / `docker compose` refuse to start without it |
-| `JWT_SECRET` | JWT signing secret (≥ 32 chars) | **Yes for Docker** (the `prod` profile rejects the dev default); optional for native dev |
-| `POSTGRES_DB` / `POSTGRES_USER` | database name / user | Optional — default to `stomo_db` / `stomo_user` |
-| `FINNHUB_API_KEY` | live quotes | Optional — quote endpoint errors without it |
-| `ALPHAVANTAGE_API_KEY` | company overview + search | Optional — those endpoints error without it |
-| `YODA_API_KEY` | Yodish translation | Optional — UI text shown untranslated (passthrough) |
+| Variable | Used for | Required?                                                                                                                                                             |
+|---|---|-----------------------------------------------------------------------------------------------------------------------------------------------------------------------|
+| `POSTGRES_PASSWORD` | database password | **Yes** — app / `docker compose` refuse to start without it                                                                                                           |
+| `JWT_SECRET` | JWT signing secret (≥ 32 chars) | **Yes for Docker** (the `prod` profile rejects the dev default); optional for native dev                                                                              |
+| `POSTGRES_DB` / `POSTGRES_USER` | database name / user | Optional — default to `stomo_db` / `stomo_user`                                                                                                                       |
+| `FINNHUB_API_KEY` | live quotes | Optional — quote endpoint errors without it                                                                                                                           |
+| `ALPHAVANTAGE_API_KEY` | company overview + search | Optional — those endpoints error without it                                                                                                                           |
+| `YODA_API_KEY` | Yodish translation | Optional — UI text shown untranslated (passthrough) <br> Yodish is ready but not implemented as big text blocks are yet to be supported (would also be expensive :/ ) |
 
 The optional API keys only gate their own feature — the rest of the app works without them
 (Yahoo history is keyless). PostgreSQL runs on port `5432`.
@@ -285,6 +285,17 @@ frontend/src/
   api/          fetch wrappers for the backend
   auth/ theme/  React context providers
 ```
+---
+
+## Nice to Know
+
+- In the ``docs`` directory you can find further instructions or chead sheets
+- If I have not told it twice by now, going to ``frontend/src/config.js`` enables you to change the ``LIVE_APIS``-Flag from false (default) to true. 
+  <br> The system runs on API-savings mode by default as Finnhub and AlphaVantage are limited in their free daily tokens.
+  <br> I suggest leaving it on false at first, setting up a new user, looking for stocks from the banner, the current popular ones or by searching for symbols yourself, and after that setting the flag to ```true``` to get corporate dossiers and further market data. <br>
+  Please note that the searchbar will also be active so it could be helpful to search precisely for one stock (to see suggestions, in my case it was always AAPL or PLTR) and then opening it, as either way the tokens could be maxed out very fast. They reset after 24h so maybe come back if interested
+
+**Have fun testing**
 
 ---
 

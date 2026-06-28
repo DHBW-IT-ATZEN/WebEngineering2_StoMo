@@ -1,7 +1,8 @@
 # Working with the StoMo PostgreSQL database
 
 A practical cheat sheet for inspecting and fixing data in the StoMo database
-(`stomo_db`), which runs inside the `stomo-postgres` Docker container.
+(`stomo_db`), which runs inside the `stomo-postgres` Docker container. <br>
+**Or for dummies that forget every time what exactly to call again when in exec, you decide**
 
 Connection details come from your `.env` file (see [`.env.example`](../.env.example));
 docker-compose injects them into the container as `POSTGRES_*` variables:
