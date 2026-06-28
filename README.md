@@ -5,8 +5,20 @@ interactive intraday/weekly/monthly price chart, and a company "dossier"), searc
 and curate **multiple personal watchlists** that track performance from the moment you add a
 symbol. The backend enriches its own data by calling several external market-data APIs.
 
-Built for the *Web Engineering 2* assignment (DHBW). Theme: **stock monitoring** (not the
-lecture's SkyWatch example).
+
+**AI-Disclosure for DHBW** \
+While writing/programming this assignment, AI has been used to support the student and help to 
+learn new skills. The following ressources have been used as part of this project:
+
+| Software                                 | Tasks                                                                                                                                                                                                                                                                                                                                                                                                                                                    |
+|------------------------------------------|----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
+| Anthropics Claude/Claude-Code            | Capabilities to understand context by having an overreaching look into projectstructure was used for: <br>**Debugging**: increased speed finding broken code instead of manually debugging whole data pipelines <br>**Explaination of new functionalities**: When trying to implement new ideas, claude provided helpful <br> suggestions trough insight. <br> **Documentation**: Claude helped documenting and streamlined the workflow by co-authoring |
+| Googles Gemini Pro                       | Capabilities for deep web-research streamlined and shortened time to research new ideas <br> **Example**: Getting near-time marketdata proved quite difficult using limited services trough Finnhub <br> and AlphaVantage APIs. Google returned inofficial but stable Yahoo-Finance API which was "unlimited" <br> and stable. It also helped by in refining my data model.                                                                              |
+| Google Stitch <br> stitch.withgoogle.com | Stitch is an AI-driven visual UI-design engine that enables rapid prototyping. <br> Taking inspiration from leading trading platforms, I designed my own monitoring dashboard                                                                                                                                                                                                                                                                            |
+
+
+AI was used in its allowed way and only served a supporting role. Concept, design and processing has been done by myself using AI to help me learn new skills.
+Main Inspiration has been taken from tradingview.com
 
 ---
 
@@ -20,7 +32,7 @@ lecture's SkyWatch example).
 └──────────┘                    │      │      │                └──────────────────────┘
                                 │      ▼      │
                                 │ ┌──────────┐│
-                                │ │PostgreSQL││  (H2 in-memory for tests)
+                                │ │PostgreSQL││  (started using MySql, switched in the end)
                                 │ └──────────┘│
                                 └─────────────┘
 ```
@@ -31,6 +43,8 @@ lecture's SkyWatch example).
 - **Database** — PostgreSQL at runtime; in-memory **H2** for the test suite.
 - **Third-party** — the backend aggregates data from Finnhub, Yahoo Finance and Alpha Vantage
   (details below), plus an optional Yodish translation API.
+
+**Note**: To save on API-calls, 
 
 ---
 
@@ -140,6 +154,10 @@ docker compose up -d --build      # PostgreSQL + backend (:8080) + frontend (:80
 docker compose down               # stop everything
 ```
 
+**This `http://localhost` path is the standard way to run StoMo** — no certificate, no hosts
+entry, works on any machine. Use this unless you specifically need one of the optional setups
+below.
+
 **Nicer URL (optional):** to use `http://stomo.lab` instead of `localhost`, add a hosts entry
 `127.0.0.1 stomo.lab` — `C:\Windows\System32\drivers\etc\hosts` on Windows, `/etc/hosts` on
 macOS/Linux (needs admin/sudo). No certificate needed; it's plain HTTP.
@@ -157,7 +175,13 @@ docker compose up -d db
 cd frontend && npm install && npm run dev   # proxies /api → :8080
 ```
 
-### Option C — serve at https://stomo.dev (local HTTPS, optional)
+### Option C — serve at https://stomo.dev (local HTTPS, optional / experimental)
+
+> ⚠️ **Not the standard way to run StoMo — use Option A (`http://localhost`).** This path only
+> works on a machine that has generated its own mkcert certificate **and** added a `stomo.dev`
+> hosts entry (both are per-developer and not committed), so it can't be shared as-is. If you
+> open `https://stomo.dev` without first starting the HTTPS override below, the browser shows
+> nothing — that's expected; switch to `http://localhost`.
 
 For a production-style URL instead of `localhost`, the stack can run behind nginx TLS at
 **https://stomo.dev**, using a locally-trusted [mkcert](https://github.com/FiloSottile/mkcert)
@@ -234,12 +258,12 @@ layers:
 
 ## Third-party APIs
 
-| API | Role | Auth | Notes |
-|---|---|---|---|
-| **Finnhub** | Real-time quotes | API key | Free tier sufficient |
-| **Yahoo Finance** | Intraday/historical price series | keyless | Unofficial; **cached in the DB** with stale-fallback |
-| **Alpha Vantage** | Company overview + symbol search | API key | Free tier (≈25 req/day); client-side throttled |
-| **Yodish (RapidAPI)** | Optional UI-text translation | API key | Cached per phrase; passthrough without a key |
+| API | Role | Auth | Notes                                                                                                                                                            |
+|---|---|---|------------------------------------------------------------------------------------------------------------------------------------------------------------------|
+| **Finnhub** | Real-time quotes | API key | Free tier sufficient                                                                                                                                             |
+| **Yahoo Finance** | Intraday/historical price series | keyless | Unofficial; **cached in the DB** with stale-fallback                                                                                                             |
+| **Alpha Vantage** | Company overview + symbol search | API key | Free tier (≈25 req/day); client-side throttled                                                                                                                   |
+| **Yodish (RapidAPI)** | Optional UI-text translation | API key | Cached per phrase; passthrough without a key. <br> Nice to have, would have been activated in light mode (thats why earthy colors, but too much text in dossier. |
 
 History data is persisted in `price_history` and translations in `yoda_translations` so each
 external call is made at most as often as needed — protecting the free-tier rate limits.
@@ -266,9 +290,9 @@ frontend/src/
 
 ## Bonus features implemented
 
-- ✅ **Authentication** with Spring Security + JWT
-- ✅ **OpenAPI / Swagger** docs (`/swagger-ui.html`)
-- ✅ **Docker** + Docker Compose for the whole stack
-- ✅ **CI** (GitHub Actions) — builds & tests backend and frontend on every push
-- ✅ Test suite with **> 10 tests** (45) across unit / integration / API
-- ✅ **PostgreSQL** as the runtime database (H2 for tests)
+- **Authentication** with Spring Security + JWT
+- **OpenAPI / Swagger** docs (`/swagger-ui.html`)
+- **Docker** + Docker Compose for the whole stack
+- **CI** (GitHub Actions) — builds & tests backend and frontend on every push
+- Test suite with **> 10 tests** (45) across unit / integration / API
+- **PostgreSQL** as the runtime database (H2 for tests)
