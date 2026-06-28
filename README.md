@@ -123,9 +123,18 @@ central `@RestControllerAdvice`.
 
 ## Running locally
 
+> **First time?** Create your `.env` before starting — see
+> [docs/setup.md](docs/setup.md) for installation prerequisites, the full `.env` walkthrough,
+> and troubleshooting.
+>
+> ```bash
+> cp .env.example .env     # then set POSTGRES_PASSWORD and JWT_SECRET (≥ 32 chars)
+> ```
+
 ### Option A — full stack with Docker (recommended)
 
 ```bash
+cp .env.example .env              # first time only — set POSTGRES_PASSWORD + JWT_SECRET
 docker compose up -d --build      # PostgreSQL + backend (:8080) + frontend (:80)
 # open http://localhost   (or http://stomo.lab — see the note below)
 docker compose down               # stop everything
@@ -172,21 +181,22 @@ docker compose -f docker-compose.yml -f docker-compose.https.yml up -d --build
 `.dev` is HSTS-preloaded, so browsers force HTTPS — the mkcert certificate is what lets it load
 without warnings.
 
-### Environment variables (optional)
+### Environment variables
 
-Put these in a `.env` file (loaded by Docker Compose) or your shell. **All are optional** —
-the app boots without them; features that need a key simply stay dormant and the rest works
-(Yahoo history is keyless).
+Configure these in a `.env` file (copy [`.env.example`](.env.example) — it lists every
+variable). Docker Compose loads `.env` automatically. Full walkthrough: [docs/setup.md](docs/setup.md).
 
-| Variable | Used for | Without it |
+| Variable | Used for | Required? |
 |---|---|---|
-| `FINNHUB_API_KEY` | live quotes | quote endpoint returns an upstream error |
-| `ALPHAVANTAGE_API_KEY` | company overview + search | those endpoints return an upstream error |
-| `YODA_API_KEY` | Yodish translation | UI text shown untranslated (passthrough) |
-| `JWT_SECRET` | overrides the dev signing secret (≥ 32 chars) | a built-in dev secret is used |
+| `POSTGRES_PASSWORD` | database password | **Yes** — app / `docker compose` refuse to start without it |
+| `JWT_SECRET` | JWT signing secret (≥ 32 chars) | **Yes for Docker** (the `prod` profile rejects the dev default); optional for native dev |
+| `POSTGRES_DB` / `POSTGRES_USER` | database name / user | Optional — default to `stomo_db` / `stomo_user` |
+| `FINNHUB_API_KEY` | live quotes | Optional — quote endpoint errors without it |
+| `ALPHAVANTAGE_API_KEY` | company overview + search | Optional — those endpoints error without it |
+| `YODA_API_KEY` | Yodish translation | Optional — UI text shown untranslated (passthrough) |
 
-PostgreSQL defaults (see `application.properties`): db `stomo_db`, user `stomo_user`, password
-`stomo_password`, port `5432`.
+The optional API keys only gate their own feature — the rest of the app works without them
+(Yahoo history is keyless). PostgreSQL runs on port `5432`.
 
 ### Migrating data from an old MySQL instance
 
