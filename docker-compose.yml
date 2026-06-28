@@ -36,10 +36,32 @@ services:
       - SPRING_DATASOURCE_URL=jdbc:postgresql://db:5432/stomo_db
       - SPRING_DATASOURCE_USERNAME=stomo_user
       - SPRING_DATASOURCE_PASSWORD=stomo_password
+      # Dynamic German translation via the self-hosted LibreTranslate service.
+      - LIBRETRANSLATE_URL=http://libretranslate:5000
     depends_on:
       db:
         condition: service_healthy     # wait until Postgres is accepting connections
+      # No hard dependency on libretranslate: the translation feature degrades gracefully
+      # (text passes through), so an unavailable translator must never block the backend.
     # The image's HEALTHCHECK (Actuator /actuator/health) drives this service's health status.
+
+  # Self-hosted machine translation (en -> de) for dynamic text. No API key required.
+  libretranslate:
+    image: libretranslate/libretranslate:latest
+    container_name: stomo-libretranslate
+    restart: unless-stopped
+    environment:
+      - LT_LOAD_ONLY=en,de          # only load the English/German model -> faster startup, less RAM
+      - LT_DISABLE_WEB_UI=true
+    # No named volume: the image runs as non-root and can't write a root-owned volume mount.
+    # The small en<->de model simply re-downloads if the container is recreated.
+    healthcheck:
+      # The image ships python but no curl; hit /languages to confirm the model is ready.
+      test: ["CMD-SHELL", "python -c \"import urllib.request,sys; sys.exit(0 if urllib.request.urlopen('http://localhost:5000/languages').getcode()==200 else 1)\""]
+      interval: 15s
+      timeout: 10s
+      retries: 10
+      start_period: 120s            # first boot downloads the en<->de model
 
   # Static frontend (Vite build) served by nginx, with /api proxied to the backend container
   frontend:
