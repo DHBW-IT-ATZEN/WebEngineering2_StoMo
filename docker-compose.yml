@@ -5,15 +5,18 @@ services:
     container_name: stomo-postgres
     restart: unless-stopped
     environment:
-      POSTGRES_DB: stomo_db
-      POSTGRES_USER: stomo_user
-      POSTGRES_PASSWORD: stomo_password
+      # Credentials are read from .env (auto-loaded by docker compose). The password is
+      # required (`:?`) — compose refuses to start if POSTGRES_PASSWORD is unset/empty.
+      POSTGRES_DB: ${POSTGRES_DB:-stomo_db}
+      POSTGRES_USER: ${POSTGRES_USER:-stomo_user}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?POSTGRES_PASSWORD is not set. Run 'cp .env.example .env' and set it (see docs/setup.md)}
     ports:
       - "5432:5432"
     volumes:
       - pgdata:/var/lib/postgresql/data
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U stomo_user -d stomo_db"]
+      # $$ escapes compose interpolation so the value is read from the container's env at runtime.
+      test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER} -d $${POSTGRES_DB}"]
       interval: 10s
       timeout: 5s
       retries: 5
@@ -26,16 +29,18 @@ services:
     restart: unless-stopped
     ports:
       - "8080:8080"
-    env_file:
-      - .env                            # ALPHAVANTAGE_API_KEY / FINNHUB_API_KEY / YODA_API_KEY / JWT_SECRET
+    env_file:                           # ALPHAVANTAGE_API_KEY / FINNHUB_API_KEY / YODA_API_KEY / JWT_SECRET
+      - path: .env
+        required: true
     environment:
       # Production profile: the app refuses to boot with the built-in dev JWT secret,
       # so a strong JWT_SECRET must be supplied via .env.
       - SPRING_PROFILES_ACTIVE=prod
       # Override the localhost DB URL from application.properties — use the compose-network "db" host.
-      - SPRING_DATASOURCE_URL=jdbc:postgresql://db:5432/stomo_db
-      - SPRING_DATASOURCE_USERNAME=stomo_user
-      - SPRING_DATASOURCE_PASSWORD=stomo_password
+      # Credentials come from .env; the password is required (compose fails if POSTGRES_PASSWORD is unset).
+      - SPRING_DATASOURCE_URL=jdbc:postgresql://db:5432/${POSTGRES_DB:-stomo_db}
+      - SPRING_DATASOURCE_USERNAME=${POSTGRES_USER:-stomo_user}
+      - SPRING_DATASOURCE_PASSWORD=${POSTGRES_PASSWORD:?POSTGRES_PASSWORD is not set. Run 'cp .env.example .env' and set it (see docs/setup.md)}
       # Dynamic German translation via the self-hosted LibreTranslate service.
       - LIBRETRANSLATE_URL=http://libretranslate:5000
     depends_on:

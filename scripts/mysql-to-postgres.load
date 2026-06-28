@@ -8,9 +8,11 @@
 -- intentionally excluded. pgloader recreates the schema, copies the rows, and
 -- resets the identity sequences so new inserts continue past the migrated ids.
 --
+-- Connection strings are templated: scripts/migrate-mysql-to-postgres.sh renders
+-- the ${...} placeholders from the environment (.env) via envsubst before running.
 LOAD DATABASE
-     FROM     mysql://stomo_user:stomo_password@stomo-mysql:3306/stomo_db
-     INTO postgresql://stomo_user:stomo_password@stomo-postgres:5432/stomo_db
+     FROM     mysql://${MYSQL_USER}:${MYSQL_PASSWORD}@stomo-mysql:3306/${MYSQL_DB}
+     INTO postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@stomo-postgres:5432/${POSTGRES_DB}
 
  WITH include drop, create tables, create indexes, reset sequences, foreign keys
 
